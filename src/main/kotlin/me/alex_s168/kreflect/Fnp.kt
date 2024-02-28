@@ -1,16 +1,27 @@
 package me.alex_s168.kreflect
 
-import kotlinx.io.files.Path
-
-fun main() {
-
+fun main(args: Array<String>) {
+    // pureCat(args)
+    //     .impure()
+    val inp = sequenceOf("AAA", "BBB", "AAA", "AAA", "AAA", "BBB")
+    val out = inp.easyMappingSequence { i, s, m ->
+        if (s(i-1) == m(i)) null
+        else m(i)
+    }
+    println(out.contents)
 }
 
-fun pureMain(args: Array<String>): Monad<Unit> =
-    args.map {
+fun pureCat(args: Array<String>): Monad<Unit> =
+    args
+    .ifEmpty { arrayOf("-") }
+    .map {
         if (it == "-") readIn()
         else unit(it)
             .asPath()
             .read()
-            .bind { it.stringify(64) }
+            .stringify()
     }
+    .rewrap()
+    .flatten()
+    .map { unit(it).print() }
+    .combine()

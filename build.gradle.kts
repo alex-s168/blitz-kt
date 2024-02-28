@@ -3,10 +3,6 @@ plugins {
     application
 }
 
-application {
-    mainClass = "me.alex_s168.kreflect.TermKt"
-}
-
 group = "me.alex_s168"
 version = "0.1"
 
@@ -23,6 +19,11 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
+
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(11)
+}
+
+application {
+    mainClass.set("me.alex_s168.kreflect.FnpKt")
 }

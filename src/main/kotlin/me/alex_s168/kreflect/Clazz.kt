@@ -1,11 +1,8 @@
 package me.alex_s168.kreflect
 
-import kotlinx.io.Buffer
-import kotlinx.io.RawSource
+import kotlinx.io.*
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
-import kotlinx.io.readByteArray
-import kotlinx.io.readTo
 import kotlin.math.max
 import kotlin.math.min
 
@@ -13,13 +10,27 @@ interface IndexableSequence<T>: Sequence<T> {
     operator fun get(index: Int): T
 }
 
-fun <T> lazySequence(vararg init: Pair<Int, T>, f: (Int, (Int) -> T) -> T): IndexableSequence<T> =
+data class Obj<T>(val v: T)
+
+data class MutObj<T>(val v: T)
+
+fun <T> lazySequence(vararg init: Pair<Int, T>, default: Obj<T>?, f: (Int, (Int) -> T) -> T): IndexableSequence<T> =
     object : IndexableSequence<T> {
         val map = mutableMapOf(*init)
 
+        var current: Int? = null
+
         fun comp(iIn: Int): T {
             val i = max(0, iIn)
-            return map[i] ?: f(i, ::comp).also { map[i] = it }
+            if (current == i)
+                return (default ?: throw Exception("recursion detected")).v
+            return map[i] ?: let {
+                current = i
+                val res = f(i, ::comp)
+                map[i] = res
+                current = null
+                res
+            }
         }
 
         override fun get(index: Int) = comp(index)
@@ -34,6 +45,90 @@ fun <T> lazySequence(vararg init: Pair<Int, T>, f: (Int, (Int) -> T) -> T): Inde
                     comp(i ++)
             }
     }
+
+fun <T> easySequence(vararg init: Pair<Int, T?>, f: (Int, (Int) -> T?) -> T?): Sequence<T?> =
+    lazySequence(*init, default = Obj(null)) { i, ff ->
+        f(i) { index ->
+            var indexC = index
+            var v: T? = null
+            while (indexC > 0 && v == null)
+                v = ff(indexC --)
+            v
+        }
+    }
+
+fun <I, T> Sequence<I>.easyMappingSequence(vararg init: Pair<Int, T?>, f: (Int, (Int) -> T?, (Int) -> I) -> T?): Sequence<T?> {
+    val indexable = this.asIndexable()
+    return easySequence(*init) { i, ff ->
+        f(i, ff, indexable::get)
+    }.limitBy(indexable)
+         .removeNull()
+}
+
+fun <T> IndexableSequence<T>.modifier(mod: (Sequence<T>) -> Sequence<T>) =
+    object : IndexableSequence<T> {
+        val other = mod(this@modifier)
+
+        override fun iterator(): Iterator<T> =
+            other.iterator()
+
+        override fun get(index: Int): T =
+            this@modifier[index]
+    }
+
+fun <T> Sequence<T>.removeNull(): Sequence<T> =
+    mapNotNull { it }
+
+fun <T> IndexableSequence<T>.removeNull(): IndexableSequence<T> =
+    modifier { it.removeNull() }
+
+fun <A, B> Sequence<A>.limitBy(other: Sequence<B>): Sequence<A> =
+    object : Sequence<A> {
+        override fun iterator(): Iterator<A> =
+            object : Iterator<A> {
+                val s = this@limitBy.iterator()
+                val o = other.iterator()
+
+                override fun hasNext(): Boolean =
+                    o.hasNext() && s.hasNext()
+
+                override fun next(): A =
+                    s.next().also { o.next() }
+            }
+    }
+
+fun <A, B> IndexableSequence<A>.limitBy(other: Sequence<B>): IndexableSequence<A> =
+    modifier { it.limitBy(other) }
+
+fun <T> Sequence<T>.asIndexable(): IndexableSequence<T> {
+    if (this is IndexableSequence)
+        return this
+
+    return object : IndexableSequence<T> {
+        val iter = this@asIndexable.iterator()
+        val values = mutableListOf<T>()
+
+        override fun get(index: Int): T {
+            if (index >= values.size) {
+                repeat(index + 1 - values.size) {
+                    values.add(iter.next())
+                }
+            }
+            return values[index]
+        }
+
+        override fun iterator(): Iterator<T> =
+            object : Iterator<T> {
+                var i = 0
+
+                override fun hasNext(): Boolean =
+                    i < values.size || iter.hasNext()
+
+                override fun next(): T =
+                    get(i ++)
+            }
+    }
+}
 
 typealias Operator<I, O> = (I) -> O
 
@@ -189,6 +284,9 @@ val <T> Iterable<T>.contents get() =
     Contents(this)
 
 val <T> Sequence<T>.contents get() =
+    Contents(this.asIterable())
+
+val <T> Array<T>.contents get() =
     Contents(this.asIterable())
 
 fun <T, O> Sequence<T>.map(chain: OperationChain<T, O>): Sequence<O> =
@@ -388,6 +486,18 @@ TODO
 
 # Contents
 TODO
+
+# Monads
+TODO
+
+# Easy Sequence
+TODO
+
+# Easy Mapping Sequence
+TODO
+
+# Obj and MutObj
+TODO
  */
 
 data class Monad<O>(
@@ -409,31 +519,30 @@ fun Monad<String>.print() =
 fun Monad<String>.asPath() =
     bind { Path(it) }
 
-fun ByteBatchSequence.stringify(batch: Int): Sequence<String> {
+fun ByteBatchSequence.stringify(batch: Int = 64): Sequence<String> {
     val iter = iterator()
-    return sequence {
+    return generateSequence {
         if (iter.hasNext())
-            yield(iter.nextBytes(batch).decodeToString())
+            iter.nextBytes(batch).decodeToString()
+        else null
     }
 }
 
 fun (() -> RawSource).readerSequence(): ByteBatchSequence =
     object : ByteBatchSequence {
         inner class Iter: ByteBatchIterator {
-            val src = this@readerSequence()
-            val buffer = Buffer()
+            val buffered = this@readerSequence().buffered()
 
             override fun nextBytes(limit: Int): ByteArray {
-                src.readAtMostTo(buffer, limit - buffer.size)
-                return buffer.readByteArray()
+                val out = ByteArray(limit)
+                var i = 0
+                while (!(buffered.exhausted() || i == limit - 1))
+                    out[i ++] = buffered.readByte()
+                return out.sliceArray(0..i)
             }
 
-            override fun nextBytes(dest: ByteArray): Int {
-                src.readAtMostTo(buffer, max(0, dest.size - buffer.size))
-                val c = buffer.size
-                buffer.readTo(dest)
-                return min(c.toInt(), dest.size)
-            }
+            override fun nextBytes(dest: ByteArray): Int =
+                nextBytes(dest.size).also { it.copyInto(dest) }.size
 
             override fun next(limit: Int): List<Byte> =
                 nextBytes(limit).toList()
@@ -453,16 +562,54 @@ fun (() -> RawSource).readerSequence(): ByteBatchSequence =
             }
 
             override fun next(): Byte =
-                nextBytes(1).first()
+                buffered.readByte()
 
-            override fun hasNext(): Boolean {
-                return src.readAtMostTo(buffer, 1) > 0
-            }
+            override fun hasNext(): Boolean =
+                !buffered.exhausted()
         }
 
         override fun iterator(): ByteBatchIterator =
             Iter()
     }
+
+fun <T> Iterable<Monad<T>>.rewrap(): Monad<Sequence<T>> =
+    Monad {
+        val iter = this@rewrap.iterator()
+        generateSequence {
+            if (iter.hasNext())iter.next().impure()
+            else null
+        }
+    }
+
+fun <T> Sequence<Monad<T>>.rewrap(): Monad<Sequence<T>> =
+    Monad {
+        val iter = this@rewrap.iterator()
+        sequence { if (iter.hasNext()) yield(iter.next().impure()) }
+    }
+
+fun Sequence<Monad<Unit>>.combine(): Monad<Unit> =
+    Monad { this@combine.forEach { it.impure() } }
+
+fun Iterable<Monad<Unit>>.combineIter(): Monad<Unit> =
+    Monad { this@combineIter.forEach { it.impure() } }
+
+fun Monad<Sequence<Monad<Unit>>>.combine(): Monad<Unit> =
+    Monad { this@combine.impure().forEach { it.impure() } }
+
+fun Monad<Iterable<Monad<Unit>>>.combineIter(): Monad<Unit> =
+    Monad { this@combineIter.impure().forEach { it.impure() } }
+
+fun <T, R> Monad<Iterable<T>>.mapIter(transform: (T) -> R): Monad<Iterable<R>> =
+    bind { it.map { x -> transform(x) } }
+
+fun <T, R> Monad<Sequence<T>>.map(transform: (T) -> R): Monad<Sequence<R>> =
+    bind { it.map { x -> transform(x) } }
+
+fun <T> Monad<Sequence<Sequence<T>>>.flatten(): Monad<Sequence<T>> =
+    bind { it.flatten() }
+
+fun Monad<ByteBatchSequence>.stringify(batch: Int = 64): Monad<Sequence<String>> =
+    bind { it.stringify(batch) }
 
 fun Monad<Path>.read() =
     bind { p -> { SystemFileSystem.source(p) }.readerSequence() }
