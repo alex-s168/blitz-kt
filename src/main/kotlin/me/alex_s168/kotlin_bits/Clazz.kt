@@ -12,7 +12,7 @@ interface IndexableSequence<T>: Sequence<T> {
 
 data class Obj<T>(val v: T)
 
-data class MutObj<T>(val v: T)
+data class MutObj<T>(var v: T)
 
 fun <T> lazySequence(vararg init: Pair<Int, T>, default: Obj<T>?, f: (Int, (Int) -> T) -> T): IndexableSequence<T> =
     object : IndexableSequence<T> {
@@ -100,11 +100,8 @@ fun <A, B> Sequence<A>.limitBy(other: Sequence<B>): Sequence<A> =
 fun <A, B> IndexableSequence<A>.limitBy(other: Sequence<B>): IndexableSequence<A> =
     modifier { it.limitBy(other) }
 
-fun <T> Sequence<T>.asIndexable(): IndexableSequence<T> {
-    if (this is IndexableSequence)
-        return this
-
-    return object : IndexableSequence<T> {
+fun <T> Sequence<T>.asIndexable(): IndexableSequence<T> =
+    object : IndexableSequence<T> {
         val iter = this@asIndexable.iterator()
         val values = mutableListOf<T>()
 
@@ -128,7 +125,6 @@ fun <T> Sequence<T>.asIndexable(): IndexableSequence<T> {
                     get(i ++)
             }
     }
-}
 
 typealias Operator<I, O> = (I) -> O
 
