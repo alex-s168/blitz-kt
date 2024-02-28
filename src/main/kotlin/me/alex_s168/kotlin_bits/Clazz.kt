@@ -1,4 +1,4 @@
-package me.alex_s168.kreflect
+package me.alex_s168.kotlin_bits
 
 import kotlinx.io.*
 import kotlinx.io.files.Path

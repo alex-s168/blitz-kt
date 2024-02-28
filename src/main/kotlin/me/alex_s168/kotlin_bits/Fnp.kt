@@ -1,8 +1,9 @@
-package me.alex_s168.kreflect
+package me.alex_s168.kotlin_bits
 
 fun main(args: Array<String>) {
     // pureCat(args)
     //     .impure()
+
     val inp = sequenceOf("AAA", "BBB", "AAA", "AAA", "AAA", "BBB")
     val out = inp.easyMappingSequence { i, s, m ->
         if (s(i-1) == m(i)) null
@@ -11,6 +12,7 @@ fun main(args: Array<String>) {
     println(out.contents)
 }
 
+// `cat` command
 fun pureCat(args: Array<String>): Monad<Unit> =
     args
     .ifEmpty { arrayOf("-") }

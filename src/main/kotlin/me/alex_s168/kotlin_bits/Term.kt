@@ -1,4 +1,4 @@
-package me.alex_s168.kreflect
+package me.alex_s168.kotlin_bits
 
 object Ansi {
     const val ESC = (0x1B).toChar()
