@@ -25,5 +25,4 @@ fun pureCat(args: Array<String>): Monad<Unit> =
     }
     .rewrap()
     .flatten()
-    .map { unit(it).print() }
-    .combine()
+    .reduce { s -> print(s) }

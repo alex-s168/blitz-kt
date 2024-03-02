@@ -12,7 +12,65 @@ interface IndexableSequence<T>: Sequence<T> {
 
 data class Obj<T>(val v: T)
 
+fun <I, O> Obj<I>?.map(transform: (I) -> O): Obj<O>? =
+    this?.v?.let { Obj(transform(it)) }
+
+fun <I, O> Obj<I>.map(transform: (I) -> O): Obj<O> =
+    Obj(transform(v))
+
 data class MutObj<T>(var v: T)
+
+typealias Provider<T> = () -> T
+
+class Either<A, B> private constructor(
+    private val a: Obj<A>?,
+    private val b: Obj<B>?
+) {
+    fun getAOrNull(): A? =
+        a?.v
+
+    fun getA(): A =
+        (a ?: throw Exception("Value of Either is not of type A!")).v
+
+    fun getAOr(prov: Provider<A>): A =
+        getAOrNull() ?: prov()
+
+    fun getBOrNull(): B? =
+        b?.v
+
+    fun getB(): B =
+        (b ?: throw Exception("Value of Either is not of type B!")).v
+
+    fun getBOr(prov: Provider<B>): B =
+        getBOrNull() ?: prov()
+
+    val isA: Boolean =
+        a != null
+
+    val isB: Boolean =
+        b != null
+
+    fun <R> then(af: (A) -> R, bf: (B) -> R): R =
+        if (isA) af(a!!.v) else bf(b!!.v)
+
+    fun <RA> mapA(transform: (A) -> RA): Either<RA, B> =
+        Either(a.map(transform), b)
+
+    fun <RB> mapB(transform: (B) -> RB): Either<A, RB> =
+        Either(a, b.map(transform))
+
+    override fun toString(): String =
+        if (isA) "Either<A>($a)"
+        else "Either<B>($b)"
+
+    companion object {
+        fun <A, B> ofA(a: A): Either<A, B> =
+            Either(Obj(a), null)
+
+        fun <A, B> ofB(b: B): Either<A, B> =
+            Either(null, Obj(b))
+    }
+}
 
 fun <T> lazySequence(vararg init: Pair<Int, T>, default: Obj<T>?, f: (Int, (Int) -> T) -> T): IndexableSequence<T> =
     object : IndexableSequence<T> {
@@ -128,7 +186,7 @@ fun <T> Sequence<T>.asIndexable(): IndexableSequence<T> =
 
 typealias Operator<I, O> = (I) -> O
 
-fun <T, O: Any> caching(tiedGet: () -> T, calc: (T) -> O) = object : Lazy<O> {
+fun <T, O: Any> caching(tiedGet: Provider<T>, calc: (T) -> O) = object : Lazy<O> {
     private var lastTiedV = tiedGet()
     private var lastV: O? = null
 
@@ -148,7 +206,7 @@ fun <T, O: Any> caching(tiedGet: () -> T, calc: (T) -> O) = object : Lazy<O> {
         lastTiedV == tiedGet() && lastV != null
 }
 
-fun <T> selfInitializingSequence(block: () -> Sequence<T>): Sequence<T> =
+fun <T> selfInitializingSequence(block: Provider<Sequence<T>>): Sequence<T> =
     object : Sequence<T> {
         val seq by lazy(block)
 
@@ -504,7 +562,7 @@ fun <O> unit(v: O): Monad<O> =
     Monad { v }
 
 fun unit(): Monad<Unit> =
-    Monad { Unit }
+    Monad { }
 
 fun <I, O> Monad<I>.bind(op: (I) -> O): Monad<O> =
     Monad { op(this@bind.impure()) }
@@ -524,7 +582,7 @@ fun ByteBatchSequence.stringify(batch: Int = 64): Sequence<String> {
     }
 }
 
-fun (() -> RawSource).readerSequence(): ByteBatchSequence =
+fun Provider<RawSource>.readerSequence(): ByteBatchSequence =
     object : ByteBatchSequence {
         inner class Iter: ByteBatchIterator {
             val buffered = this@readerSequence().buffered()
@@ -595,6 +653,19 @@ fun Monad<Sequence<Monad<Unit>>>.combine(): Monad<Unit> =
 fun Monad<Iterable<Monad<Unit>>>.combineIter(): Monad<Unit> =
     Monad { this@combineIter.impure().forEach { it.impure() } }
 
+fun <S, T : S> Monad<Sequence<T>>.reduce(operation: (acc: S, T) -> S): Monad<S> =
+    bind { it.reduce(operation) }
+
+fun <S, T : S> Monad<Iterable<T>>.reduceIter(operation: (acc: S, T) -> S): Monad<S> =
+    bind { it.reduce(operation) }
+
+fun <T> Monad<Sequence<T>>.reduce(each: (T) -> Unit): Monad<Unit> =
+    Monad { this@reduce.impure().forEach { each(it) } }
+
+
+fun <T> Monad<Iterable<T>>.reduceIter(each: (T) -> Unit): Monad<Unit> =
+    Monad { this@reduceIter.impure().forEach { each(it) } }
+
 fun <T, R> Monad<Iterable<T>>.mapIter(transform: (T) -> R): Monad<Iterable<R>> =
     bind { it.map { x -> transform(x) } }
 
@@ -612,6 +683,51 @@ fun Monad<Path>.read() =
 
 fun readIn() =
     Monad { generateSequence { readln() } }
+
+fun interface DeferScope {
+    fun defer(block: () -> Unit)
+}
+
+interface ExecutionScope: DeferScope {
+    fun onError(block: () -> Unit)
+    
+    fun error()
+
+    companion object {
+        fun create(
+            defer: (block: () -> Unit) -> Unit,
+            onError: (block: () -> Unit) -> Unit,
+            error: () -> Unit,
+        ) = object : ExecutionScope {
+            override fun defer(block: () -> Unit) =
+                defer(block)
+
+            override fun onError(block: () -> Unit) =
+                onError(block)
+
+            override fun error() =
+                error()
+        }
+    }
+}
+
+fun <R> resourceScoped(block: ExecutionScope.() -> R): R {
+    val defer = mutableListOf<() -> Unit>()
+    val onError = mutableListOf<() -> Unit>()
+    val scope = ExecutionScope.create(defer::add, onError::add) {
+        throw Exception("Manual error triggered")
+    }
+    val ex: Exception
+    try {
+        return block(scope)
+    } catch (e: Exception) {
+        ex = e
+        onError.forEach { it.invoke() }
+    } finally {
+        defer.forEach { it.invoke() }
+    }
+    throw ex
+}
 
 /*
 fun main() {
