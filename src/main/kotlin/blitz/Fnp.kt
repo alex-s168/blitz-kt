@@ -1,4 +1,4 @@
-package me.alex_s168.kotlin_bits
+package blitz
 
 fun main(args: Array<String>) {
     // pureCat(args)

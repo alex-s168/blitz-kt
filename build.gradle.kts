@@ -25,5 +25,5 @@ kotlin {
 }
 
 application {
-    mainClass.set("me.alex_s168.kotlin_bits.FnpKt")
+    mainClass.set("blitz.FnpKt")
 }
