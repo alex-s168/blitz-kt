@@ -32,10 +32,10 @@ class Either<A, B> private constructor(
         if (isA) af(a!!.v) else bf(b!!.v)
 
     fun <RA> mapA(transform: (A) -> RA): Either<RA, B> =
-        Either(a.map(transform), b)
+        Either(a.mapNotNull(transform), b)
 
     fun <RB> mapB(transform: (B) -> RB): Either<A, RB> =
-        Either(a, b.map(transform))
+        Either(a, b.mapNotNull(transform))
 
     override fun toString(): String =
         if (isA) "Either<A>($a)"

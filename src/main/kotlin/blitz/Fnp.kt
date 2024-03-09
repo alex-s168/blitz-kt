@@ -1,5 +1,8 @@
 package blitz
 
+import blitz.func.*
+import blitz.func.io.*
+
 fun main(args: Array<String>) {
     // pureCat(args)
     //     .impure()

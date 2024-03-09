@@ -6,7 +6,8 @@ to drastically decrease the amount of single reads in the original source.
 
 Example:
 ```kt
-File("text.txt")  // File
+Path("text.txt")  // Path
+  .getFile()      // File
   .openRead()     // BatchSequence<Byte>
   .batched(64)    // BatchSequence<Byte>
 ```
@@ -21,6 +22,7 @@ Example:
 val data = myData  // Sequence<Byte>
   .asBatch()       // BatchSequence<Byte>
 
-File("text.txt")
+Path("text.txt")      // Path
+  .getOrCreateFile()  // File
   .write(data)
 ```
