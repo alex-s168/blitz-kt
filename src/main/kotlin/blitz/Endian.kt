@@ -1,5 +1,8 @@
 package blitz
 
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+
 enum class Endian {
     LITTLE,
     BIG
@@ -8,7 +11,14 @@ enum class Endian {
     infix fun encodeLittle(little: ByteArray) =
         if (this == BIG) little.reversedArray()
         else little
+
+    fun toNIO(): ByteOrder =
+        if (this == LITTLE) ByteOrder.LITTLE_ENDIAN
+        else ByteOrder.BIG_ENDIAN
 }
+
+fun ByteBuffer.order(endian: Endian): ByteBuffer =
+    order(endian.toNIO())
 
 fun Long.toBytes(endian: Endian) =
     endian encodeLittle
@@ -37,3 +47,29 @@ fun Byte.toBytes() =
 
 fun UByte.toBytes() =
     toByte().toBytes()
+
+// TODO: no cheat
+
+fun ByteArray.toShort(endian: Endian) =
+    ByteBuffer.wrap(this).order(endian).getShort()
+
+fun ByteArray.toUShort(endian: Endian) =
+    toShort(endian).toUShort()
+
+fun ByteArray.toInt(endian: Endian) =
+    ByteBuffer.wrap(this).order(endian).getInt()
+
+fun ByteArray.toUInt(endian: Endian) =
+    toInt(endian).toUInt()
+
+fun ByteArray.toLong(endian: Endian) =
+    ByteBuffer.wrap(this).order(endian).getLong()
+
+fun ByteArray.toULong(endian: Endian) =
+    toLong(endian).toULong()
+
+fun ByteArray.toByte() =
+    this[0]
+
+fun ByteArray.toUByte() =
+    this[0].toUByte()
