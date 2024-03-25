@@ -15,6 +15,39 @@ interface ByteBatchIterator: BatchIterator<Byte> {
     fun nextBytes(dest: ByteArray): Int
 }
 
+fun BatchIterator<Byte>.asByteBatchIterator(): ByteBatchIterator =
+    object : ByteBatchIterator {
+        override fun nextBytes(dest: ByteArray): Int {
+            val temp = Array<Byte>(dest.size) { 0 }
+            val am = this@asByteBatchIterator.next(temp)
+            temp.copyInto(dest)
+            return am
+        }
+
+        override fun next(dest: Array<Byte>): Int =
+            this@asByteBatchIterator.next(dest)
+
+        override fun next(limit: Int): List<Byte> =
+            this@asByteBatchIterator.next(limit)
+
+        override fun next(dest: MutableList<Byte>, limit: Int) =
+            this@asByteBatchIterator.next(dest, limit)
+
+        override fun nextBytes(limit: Int): ByteArray {
+            val temp = Array<Byte>(limit) { 0 }
+            val am = this@asByteBatchIterator.next(temp)
+            val o = ByteArray(am)
+            temp.copyInto(o)
+            return o
+        }
+
+        override fun next(): Byte =
+            this@asByteBatchIterator.next()
+
+        override fun hasNext(): Boolean =
+            this@asByteBatchIterator.hasNext()
+    }
+
 interface BatchSequence<T>: Sequence<T> {
     override fun iterator(): BatchIterator<T>
 }
