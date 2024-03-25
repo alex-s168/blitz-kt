@@ -1,5 +1,7 @@
 package blitz
 
+import blitz.collections.contents
+import blitz.collections.easyMappingSequence
 import blitz.func.*
 import blitz.func.io.*
 

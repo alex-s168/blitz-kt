@@ -1,5 +1,7 @@
 package blitz
 
+import blitz.collections.selfInitializingSequence
+
 class OperationChain<I, O> private constructor(
     private val impl: Impl = Impl()
 ) {

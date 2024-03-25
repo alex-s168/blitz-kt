@@ -2,8 +2,8 @@ package blitz.io
 
 import kotlinx.io.RawSource
 import kotlinx.io.buffered
-import blitz.ByteBatchIterator
-import blitz.ByteBatchSequence
+import blitz.collections.ByteBatchIterator
+import blitz.collections.ByteBatchSequence
 import blitz.Provider
 
 fun Provider<RawSource>.readerSequence(): ByteBatchSequence =

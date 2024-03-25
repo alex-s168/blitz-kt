@@ -1,6 +1,6 @@
 package blitz.func.io
 
-import blitz.*
+import blitz.collections.ByteBatchSequence
 import blitz.func.*
 import blitz.io.*
 

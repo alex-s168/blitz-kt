@@ -43,12 +43,12 @@ class Either<A, B> private constructor(
 
     companion object {
         fun <A, B> ofA(a: A): Either<A, B> =
-            Either(Obj(a), null)
+            Either(Obj.of(a), null)
 
         fun <A, B> ofB(b: B): Either<A, B> =
-            Either(null, Obj(b))
+            Either(null, Obj.of(b))
     }
 }
 
-fun <A, B, R> Either<A, B>.commonize(): R where A: R, B: R =
+fun <A, B, R> Either<A, B>.flatten(): R where A: R, B: R =
     getAOrNull() ?: getB()

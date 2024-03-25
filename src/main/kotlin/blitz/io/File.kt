@@ -1,6 +1,6 @@
 package blitz.io
 
-import blitz.ByteBatchSequence
+import blitz.collections.ByteBatchSequence
 import kotlinx.io.Buffer
 import kotlinx.io.files.SystemFileSystem
 
