@@ -9,6 +9,9 @@ interface Obj<T> {
         fun <T> of(v: T): Obj<T> =
             object : Obj<T> {
                 override val v: T = v
+
+                override fun toString(): String =
+                    "Obj($v)"
             }
     }
 }
@@ -26,6 +29,9 @@ interface MutObj<T> {
         fun <T> of(v: T): MutObj<T> =
             object : MutObj<T> {
                 override var v: T = v
+
+                override fun toString(): String =
+                    "MutObj($v)"
             }
 
         fun <T> mutex(v: T): MutObj<T> =
@@ -34,6 +40,9 @@ interface MutObj<T> {
                 override var v: T = v
                     get() = lock.use { field }
                     set(inp) = lock.use { field = inp }
+
+                override fun toString(): String =
+                    "MutMutexObj($v)"
             }
     }
 }

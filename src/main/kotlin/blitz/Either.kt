@@ -38,8 +38,8 @@ class Either<A, B> private constructor(
         Either(a, b.mapNotNull(transform))
 
     override fun toString(): String =
-        if (isA) "Either<A>($a)"
-        else "Either<B>($b)"
+        if (isA) "Either<A>(${a!!.v})"
+        else "Either<B>(${b!!.v})"
 
     companion object {
         fun <A, B> ofA(a: A): Either<A, B> =
