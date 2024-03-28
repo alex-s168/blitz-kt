@@ -80,7 +80,7 @@ val bytes = num.toBytes(Endian.LITTLE)
 ### Caching delegate property
 ```kotlin
 class Label {
-    val font = "Arial 11"
+    var font = "Arial 11"
     val fontWith by caching(::font) {
         someFunctionToCalculate(it)
     }
