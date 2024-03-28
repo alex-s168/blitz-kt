@@ -25,6 +25,11 @@ val fib = lazySequence(0 to 1) { i, f ->
 
 println(fib[10])
 ```
+### Terminal colors
+```kotlin
+Terminal.print("Hello, ", Terminal.STYLES.BOLD)
+Terminal.println("World!", Terminal.COLORS.RED.brighter.fg, Terminal.COLORS.WHITE.bg)
+```
 ### Unix `uniq`
 ```kotlin
 val inp = sequenceOf("AAA", "BBB", "AAA", "AAA", "AAA", "BBB")
