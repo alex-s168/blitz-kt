@@ -16,7 +16,7 @@ fun Provider<RawSource>.readerSequence(): ByteBatchSequence =
                 var i = 0
                 while (!(buffered.exhausted() || i == limit - 1))
                     out[i ++] = buffered.readByte()
-                return out.sliceArray(0..i)
+                return out.sliceArray(0..<i)
             }
 
             override fun nextBytes(dest: ByteArray): Int =
