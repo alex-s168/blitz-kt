@@ -24,6 +24,6 @@ repositories {
 }
 
 dependencies {
-    implementation("me.alex_s168:blitz:0.1")
+    implementation("me.alex_s168:blitz:0.5")
 }
 ```

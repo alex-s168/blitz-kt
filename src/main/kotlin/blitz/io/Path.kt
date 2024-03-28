@@ -84,7 +84,7 @@ value class Path(
             if (path.isEmpty()) return Path(emptyArray())
             val kx = kotlinx.io.files.Path(path)
             if (kx.isAbsolute)
-                return Path(path.substring(1).split(separator).toTypedArray())
+                return Path(path.split(separator, '/', '\\').filterNot { it.isEmpty() }.toTypedArray())
             return of(SystemFileSystem.resolve(kx).toString())
         }
     }
