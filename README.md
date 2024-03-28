@@ -1,17 +1,5 @@
 # Blitz
-Kotlin library which mainly focuses on functional programming.
-
-Features:
-- Monads
-- Either
-- Caching delegated property (similar to lazy)
-- A lot of sequence utils
-- Streaming IO using kotlinx.io
-- ByteVec (alternative to ByteBuf)
-- BitVec (similar to bit sets in other languages)
-- "Lazy" sequences
-- A lot of generative sequence types
-- BitField
+Big Kotlin library adding features that the Kotlin standard library just does not have (and might never get)
 
 ## How to get
 ```kotlin
