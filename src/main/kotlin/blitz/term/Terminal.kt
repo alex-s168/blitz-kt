@@ -38,6 +38,23 @@ object Terminal {
         val darker by lazy { Color(AnsiiMode(darkerChannel(ch(fg))), AnsiiMode(darkerChannel(ch(bg)))) }
     }
 
+    /** Escape-sequence safe string length */
+    fun len(str: String): Int {
+        var len = 0
+        var ansii = false
+        str.forEach {
+            if (ansii) {
+                if (it == 'm')
+                    ansii = false
+            } else if (it.code == 27) {
+                ansii = true
+            } else {
+                len ++
+            }
+        }
+        return len
+    }
+
     fun encodeString(str: String, vararg modes: AnsiiMode) =
         ansiiStr(str, *modes)
 

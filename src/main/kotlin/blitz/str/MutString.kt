@@ -1,10 +1,18 @@
 package blitz.str
 
+import java.util.stream.IntStream
+
 class MutString(
     init: String = "",
     var fill: Char
 ): CharSequence, Appendable {
     private val builder = StringBuilder(init)
+
+    override fun chars(): IntStream =
+        builder.chars()
+
+    override fun codePoints(): IntStream =
+        builder.codePoints()
 
     override val length: Int
         get() = builder.length
@@ -30,12 +38,12 @@ class MutString(
 
     /** if out of bounds, extends with @see fill */
     operator fun set(start: Int, str: CharSequence) {
-        if (start >= length) {
-            repeat(start - length + 1) {
+        if (start + str.length >= length) {
+            repeat(start + str.length - length + 1) {
                 builder.append(fill)
             }
         }
-        builder.insert(start, str)
+        builder.replace(start, start + str.length, str.toString())
     }
 
     override fun toString(): String =

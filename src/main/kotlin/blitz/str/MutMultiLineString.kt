@@ -7,6 +7,12 @@ class MutMultiLineString(
 
     // TODO: wrap at \n
 
+    override fun equals(other: Any?): Boolean =
+        lines == other
+
+    override fun hashCode(): Int =
+        lines.hashCode()
+
     /** if out of bounds, extends with @see fill */
     operator fun get(row: Int, col: Int): Char {
         if (row >= lines.size) {

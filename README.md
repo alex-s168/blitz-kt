@@ -98,5 +98,44 @@ val b = arrayOf(1, 2, 3, 4)
 println(a.contents == b.contents) // true
 println(b.contents) // [1, 2, 3, 4]
 ```
+### Code error messages
+````kotlin
+val source = Errors.Source("main.kt", MutMultiLineString.from("""
+    fn main() {
+        return 1 + 0
+    }
+""".trimIndent(), ' '))
+
+val errors = listOf(
+    Errors.Error(
+        "cannot return integer from function with return type void",
+        Errors.Error.Level.ERROR,
+        Errors.Location(source, 1, 11, 5)
+    ),
+    Errors.Error(
+        "return is deprecated. use yeet instead",
+        Errors.Error.Level.WARN,
+        Errors.Location(source, 1, 4, 6)
+    ),
+    Errors.Error(
+        "useless addition",
+        Errors.Error.Level.INFO,
+        Errors.Location(source, 1, 13, 3),
+        isHint = true
+    ),
+    Errors.Error(
+        "Visit https://www.example.com/doc/yeet for more information",
+        Errors.Error.Level.INFO,
+        Errors.Location(source, 1, 0, 0),
+        isLongDesc = true
+    )
+)
+
+val config = Errors.PrintConfig()
+
+Errors.print(config, errors)
+````
+Output:
+![img.png](img.png)
 ### Either
 No example yet

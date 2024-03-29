@@ -5,11 +5,17 @@ class AnsiiMode(internal val values: MutableList<Int>) {
 
     operator fun plus(other: AnsiiMode): AnsiiMode =
         AnsiiMode((values + other.values).toMutableList())
+
+    override fun equals(other: Any?): Boolean =
+        values == other
+
+    override fun hashCode(): Int =
+        values.hashCode()
 }
 
 private val escape = (27).toChar()
 
-fun ansiiStr(str: String, vararg modes: AnsiiMode) =
+internal fun ansiiStr(str: String, vararg modes: AnsiiMode) =
     if (modes.isEmpty())
         str
     else
