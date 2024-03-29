@@ -8,11 +8,3 @@ fun ByteBatchSequence.stringify(batch: Int = 64): Sequence<String> {
         else null
     }
 }
-
-fun Sequence<String>.flatten(): String {
-    val out = StringBuilder()
-    forEach {
-        out.append(it)
-    }
-    return out.toString()
-}

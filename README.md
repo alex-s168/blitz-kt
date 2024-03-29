@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    implementation("me.alex_s168:blitz:0.9")
+    implementation("me.alex_s168:blitz:0.10")
 }
 ```
 
@@ -138,5 +138,55 @@ Errors.print(config, errors)
 Output:
 
 ![img.png](img.png)
+### Split with nesting
+```kotlin
+val inp = "arr[int], long, long, arr[double], int"
+val split = inp.splitWithNesting(',', nestUp = '[', nestDown = ']')
+println(split)
+```
+### Expression parsing
+```kotlin
+val input = "sin(max(2, 3) / (3 * pi))".iterator()
+val tok = input.tokenize(
+        ignore = listOf(' ', '\n'),
+        operators = listOf(
+            Operator('+', 2, true),
+            Operator('-', 2, true),
+
+            Operator('*', 3, true),
+            Operator('/', 3, true),
+            Operator('%', 3, true),
+
+            Operator('~', 10, false),
+        )
+    )
+val rpn = tok.shuntingYard().collect()
+if (input.hasNext())
+    error("Unexpected token(s): ${input.collectToString()}")
+println(rpn)
+// outputs:
+// [
+//      Token(type=NUMBER, value=2, op=null),
+//      Token(type=NUMBER, value=3, op=null),
+//      Token(type=IDENT, value=max, op=null),
+//      Token(type=NUMBER, value=3, op=null),
+//      Token(type=IDENT, value=pi, op=null),
+//      Token(type=OPERATOR, value=null, op=Operator(symbol=*, precedence=3, leftAssociative=true)),
+//      Token(type=OPERATOR, value=null, op=Operator(symbol=/, precedence=3, leftAssociative=true)),
+//      Token(type=IDENT, value=sin, op=null)
+// ]
+```
+### SortedList
+```kotlin
+val list = SortedArrayList<Int> { it }
+list.add(1)
+list.add(9)
+list.add(5)
+println(list.contents)
+// outputs: [1, 5, 9]
+```
 ### Either
+No example yet
+
+### Tree
 No example yet

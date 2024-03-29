@@ -4,6 +4,7 @@ interface IndexableSequence<T>: Sequence<T> {
     operator fun get(index: Int): T
 }
 
+// TODO: rename to map
 fun <T> IndexableSequence<T>.modifier(mod: (Sequence<T>) -> Sequence<T>) =
     object : IndexableSequence<T> {
         val other = mod(this@modifier)

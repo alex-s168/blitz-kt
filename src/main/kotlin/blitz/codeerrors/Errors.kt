@@ -4,7 +4,6 @@ import blitz.collections.inBounds
 import blitz.str.ColoredChar
 import blitz.str.MutMultiColoredMultiLineString
 import blitz.str.MutMultiLineString
-import blitz.str.MutString
 import blitz.term.AnsiiMode
 import blitz.term.Terminal
 
@@ -143,7 +142,7 @@ object Errors {
 
                 byCol.filter { it.isLongDesc }.forEach {
                     val msgLines = MutMultiLineString.from(it.message, fill = ' ')
-                    msg.set(row, nextCol, msgLines, Terminal.COLORS.WHITE.brighter.fg)
+                    msg[row, nextCol, msgLines] = Terminal.COLORS.WHITE.brighter.fg
                     row ++
                 }
 
@@ -153,41 +152,4 @@ object Errors {
             Terminal.errln("================================================================================", config.styles[worst]!! + Terminal.STYLES.BOLD)
         }
     }
-}
-
-fun main() {
-    val source = Errors.Source("main.kt", MutMultiLineString.from("""
-        fn main() {
-            return 1 + 0
-        }
-    """.trimIndent(), ' '))
-
-    val errors = listOf(
-        Errors.Error(
-            "cannot return integer from function with return type void",
-            Errors.Error.Level.ERROR,
-            Errors.Location(source, 1, 11, 5)
-        ),
-        Errors.Error(
-            "return is deprecated. use yeet instead",
-            Errors.Error.Level.WARN,
-            Errors.Location(source, 1, 4, 6)
-        ),
-        Errors.Error(
-            "useless addition",
-            Errors.Error.Level.INFO,
-            Errors.Location(source, 1, 13, 3),
-            isHint = true
-        ),
-        Errors.Error(
-            "Visit https://www.example.com/doc/yeet for more information",
-            Errors.Error.Level.INFO,
-            Errors.Location(source, 1, 0, 0),
-            isLongDesc = true
-        )
-    )
-
-    val config = Errors.PrintConfig()
-
-    Errors.print(config, errors)
 }
