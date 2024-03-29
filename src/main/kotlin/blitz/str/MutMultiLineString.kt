@@ -18,6 +18,16 @@ class MutMultiLineString(
     }
 
     /** if out of bounds, extends with @see fill */
+    operator fun get(row: Int): MutString {
+        if (row >= lines.size) {
+            repeat(row - lines.size + 1) {
+                lines.add(MutString(fill = fill))
+            }
+        }
+        return lines[row]
+    }
+
+    /** if out of bounds, extends with @see fill */
     operator fun set(row: Int, col: Int, value: Char) {
         if (row >= lines.size) {
             repeat(row - lines.size + 1) {
@@ -50,4 +60,14 @@ class MutMultiLineString(
 
     override fun toString(): String =
         lines.joinToString(separator = "\n")
+
+    companion object {
+        fun from(str: String, fill: Char): MutMultiLineString {
+            val res = MutMultiLineString(fill)
+            str.lines().forEach {
+                res.lines += MutString(it, fill)
+            }
+            return res
+        }
+    }
 }
