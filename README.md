@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    implementation("me.alex_s168:blitz:0.10")
+    implementation("me.alex_s168:blitz:0.11")
 }
 ```
 
@@ -185,6 +185,20 @@ list.add(5)
 println(list.contents)
 // outputs: [1, 5, 9]
 ```
+### Matrix
+```kotlin
+val mat = Matrix(3, 3) { x, y -> x * (3-y) }
+println(mat)
+println(mat.transposeCopy())
+println(mat.diagonals())
+```
+### Box drawing
+```kotlin
+val out = MutMultiColoredMultiLineString(fill = ColoredChar(' '))
+out.box(x to y, 20 to 5, BoxDrawingCharSet.ROUND, Terminal.COLORS.WHITE.brighter.fg)
+println(out.toString())
+```
+
 ### Either
 No example yet
 

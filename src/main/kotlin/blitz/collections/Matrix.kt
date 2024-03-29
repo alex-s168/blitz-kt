@@ -59,12 +59,3 @@ class Matrix<T>(
             it.joinToString(separator = ", ", prefix = "| ", postfix = " |")
         } + "\n--"
 }
-
-fun main() {
-    val mat = Matrix(3, 3) { x, y -> x * (3-y) }
-    println(mat)
-
-    println(mat.transposeCopy())
-
-    println(mat.diagonals())
-}

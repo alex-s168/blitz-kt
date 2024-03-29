@@ -28,3 +28,15 @@ kotlin {
 application {
     mainClass.set("blitz.FnpKt")
 }
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            groupId = group.toString()
+            artifactId = "blitz"
+            version = version.toString()
+
+            from(components["kotlin"])
+        }
+    }
+}

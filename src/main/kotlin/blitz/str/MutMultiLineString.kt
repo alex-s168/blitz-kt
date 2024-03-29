@@ -64,6 +64,10 @@ class MutMultiLineString(
         }
     }
 
+    fun box(start: Pair<Int, Int>, end: Pair<Int, Int>, set: BoxDrawingCharSet) {
+        set.draw(start, end) { x, y, c -> this[y, x] = c }
+    }
+
     override fun toString(): String =
         lines.joinToString(separator = "\n")
 

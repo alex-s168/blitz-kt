@@ -1,6 +1,7 @@
 package blitz.str
 
 import blitz.term.AnsiiMode
+import blitz.term.Terminal
 
 class MutMultiColoredMultiLineString(
      var fill: ColoredChar
@@ -102,6 +103,10 @@ class MutMultiColoredMultiLineString(
         value.lines.forEachIndexed { index, line ->
             this[index + rowStart, colStart] = line
         }
+    }
+
+    fun box(start: Pair<Int, Int>, end: Pair<Int, Int>, set: BoxDrawingCharSet, style: AnsiiMode = AnsiiMode(mutableListOf())) {
+        set.draw(start, end) { x, y, c -> this[y, x] = ColoredChar(c, style) }
     }
 
     override fun toString(): String =
