@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    implementation("me.alex_s168:blitz:0.8")
+    implementation("me.alex_s168:blitz:0.9")
 }
 ```
 
@@ -136,6 +136,7 @@ val config = Errors.PrintConfig()
 Errors.print(config, errors)
 ````
 Output:
+
 ![img.png](img.png)
 ### Either
 No example yet
