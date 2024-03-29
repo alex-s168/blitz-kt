@@ -17,6 +17,8 @@ dependencies {
 ```
 
 ## Examples
+### CLI TicTacToe
+-> [link](https://gist.github.com/alex-s168/184d6962cc65572cf21a03d7ea4ec4df)
 ### Fibonacci sequence
 ```kotlin
 val fib = lazySequence(0 to 1) { i, f ->
