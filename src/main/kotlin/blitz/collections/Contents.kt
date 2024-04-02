@@ -49,3 +49,15 @@ val <T> Sequence<T>.contents get() =
 
 val <T> Array<T>.contents get() =
     Contents(this.asIterable())
+
+val IntArray.contents get() =
+    Contents(this.asIterable())
+
+val ByteArray.contents get() =
+    Contents(this.asIterable())
+
+val DoubleArray.contents get() =
+    Contents(this.asIterable())
+
+val FloatArray.contents get() =
+    Contents(this.asIterable())

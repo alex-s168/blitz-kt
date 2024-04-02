@@ -75,3 +75,24 @@ fun <T> selfInitializingSequence(block: Provider<Sequence<T>>): Sequence<T> =
         override fun iterator(): Iterator<T> =
             Iter()
     }
+
+fun <T> generateSequenceWithIndex(len: Int, fn: (index: Int) -> T): IndexableSequence<T> =
+    object : IndexableSequence<T> {
+        override fun get(index: Int): T {
+            if (index >= len) error("Index $index out of bounds!")
+            return fn(index)
+        }
+
+        override fun iterator(): Iterator<T> =
+            object : Iterator<T> {
+                private var index = 0
+
+                override fun hasNext(): Boolean =
+                    index < len
+
+                override fun next(): T {
+                    if (index >= len) error("No next")
+                    return fn(index ++)
+                }
+            }
+    }
