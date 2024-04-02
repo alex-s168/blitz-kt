@@ -17,6 +17,9 @@ object Terminal {
         val DIM = AnsiiMode(2)
         val UNDERLINE = AnsiiMode(4)
         val BLINK = AnsiiMode(5)
+        val OVERLINE = AnsiiMode(53)
+        val FRAMED = AnsiiMode(51)
+        val ENCIRCLED = AnsiiMode(52)
     }
 
     class Color(
@@ -83,5 +86,47 @@ object Terminal {
     )
     fun warn(str: String, vararg modes: AnsiiMode) {
         errln(str, *modes)
+    }
+
+    object Cursor {
+        fun savePos() {
+            print(escape + "7")
+        }
+
+        fun restorePos() {
+            print(escape + "8")
+        }
+
+        fun goto(line: Int, col: Int) {
+            print("$escape[${line};${col}H")
+        }
+
+        fun gotoZero() {
+            print("$escape[H")
+        }
+
+        fun gotoBeginOfPrevLine() {
+            print("$escape[F")
+        }
+
+        fun gotoBeginOfLine() {
+            print((0x0D).toChar())
+        }
+    }
+
+    fun save() {
+        print("$escape[?47h")
+    }
+
+    fun restore() {
+        print("$escape[?47l")
+    }
+
+    fun clear() {
+        print("$escape[2J")
+    }
+
+    fun clearLine() {
+        print("$escape[2K")
     }
 }

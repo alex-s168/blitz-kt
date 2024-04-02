@@ -13,7 +13,7 @@ class AnsiiMode(internal val values: MutableList<Int>) {
         values.hashCode()
 }
 
-private val escape = (27).toChar()
+internal val escape = (27).toChar()
 
 internal fun ansiiStr(str: String, vararg modes: AnsiiMode) =
     if (modes.isEmpty())

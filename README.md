@@ -200,9 +200,42 @@ val out = MutMultiColoredMultiLineString(fill = ColoredChar(' '))
 out.box(x to y, 20 to 5, BoxDrawingCharSet.ROUND, Terminal.COLORS.WHITE.brighter.fg)
 println(out.toString())
 ```
+### Progress bar
+```kotlin
+val prog = ProgressBar(100, ProgressBar.Style.BASIC)
+repeat(100) {
+    prog.step(it)
+    Thread.sleep(10)
+}
+prog.step(100)
+prog.end()
+```
+### Parser combinator
+```kotlin
+val jsonArray = parser {
+    it.require("[")
+        ?.array(",") { elem ->
+            elem.whitespaces()
+                .map(NumParse.int)
+                ?.whitespaces()
+        }
+        ?.require("]")
+}
 
+println(jsonArray(Parsable("[ 1,  2,3 , 4]")))
+```
+### JSON parser
+```kotlin
+val json = """
+{
+    "a": 1,
+    "b": { "1": 1, "2": 2 },
+    "c": [1,2]
+}
+"""
+println(JSON.parse(json)!!.obj["b"]!!.obj["1"]!!.num)
+```
 ### Either
 No example yet
-
 ### Tree
 No example yet
