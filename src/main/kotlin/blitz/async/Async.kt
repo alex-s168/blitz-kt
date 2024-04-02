@@ -1,7 +1,5 @@
 package blitz.async
 
-import kotlin.random.Random
-
 // TODO: use coroutines?
 fun <R> async(fn: () -> R): Future<R> {
     lateinit var future: ThreadWaitingFuture<R>

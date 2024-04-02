@@ -4,7 +4,7 @@ import kotlin.math.max
 
 object Search {
     /**
-     * Find a element by comparing.
+     * Find an element by comparing.
      * Only works on sorted lists
      */
     fun <T, C: Comparable<C>> findElementComparing(
