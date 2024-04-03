@@ -1,11 +1,10 @@
 package blitz.parse.comb
 
 import blitz.str.collectToString
-import kotlin.math.max
 
-@JvmInline
-value class Parsable(
-    val str: String
+data class Parsable(
+    val str: String,
+    val loc: Int? = null
 )
 
 typealias Parser<T> = (Parsable) -> Pair<Parsable, T>?
@@ -26,21 +25,24 @@ infix fun <T> Parser<T>.or(other: Parser<T>): Parser<T> = {
 }
 
 fun Parsable.spaces(): Parsable {
-    return Parsable(str.trimStart(' '))
+    val new = str.trimStart(' ')
+    return Parsable(new, loc?.let { it + str.length - new.length })
 }
 
 fun Parsable.whitespaces(): Parsable {
-    return Parsable(str.trimStart())
+    val new = str.trimStart()
+    return Parsable(new, loc?.let { it + str.length - new.length })
 }
 
 fun Parsable.require(what: String): Parsable? {
     if (str.startsWith(what))
-        return Parsable(str.substring(what.length))
+        return Parsable(str.substring(what.length), loc?.let { it + what.length })
     return null
 }
 
 fun <T> Parsable.untilRequire(c: String, map: (String) -> T?): Pair<Parsable, T>? {
-    return map(str.substringBefore(c))?.let { Parsable(str.substringAfter(c)) to it }
+    val before = str.substringBefore(c)
+    return map(before)?.let { Parsable(str.substringAfter(c), loc?.let { it + before.length }) to it }
 }
 
 fun <T> Parsable.asLongAs(vararg li: Char, map: (String) -> T?): Pair<Parsable, T>? {
@@ -52,7 +54,7 @@ fun <T> Parsable.asLongAs(vararg li: Char, map: (String) -> T?): Pair<Parsable, 
             break
     }
     val out = str.substring(o.size)
-    return map(o.iterator().collectToString())?.let { Parsable(out) to it }
+    return map(o.iterator().collectToString())?.let { Parsable(out, loc?.plus(o.size)) to it }
 }
 
 fun <T> Parsable.map(parser: Parser<T>): Pair<Parsable, T>? =
@@ -89,17 +91,19 @@ fun <T> Pair<Parsable, T>.require(what: String): Pair<Parsable, T>? =
 fun <T> Parsable.array(sep: String, map: (Parsable) -> Pair<Parsable, T>?): Pair<Parsable, List<T>> {
     val out = mutableListOf<T>()
 
+    var loc = loc
     var curr = str
     fun step() =
-        map(Parsable(curr))?.also {
+        map(Parsable(curr, loc))?.also {
             curr = it.first.str
+            loc = it.first.loc
         }
 
     while (true) {
         val r = step() ?: break
         out.add(r.second)
-        curr = (Parsable(curr).require(sep) ?: break).str
+        curr = (Parsable(curr, loc).require(sep) ?: break).str
     }
 
-    return Parsable(curr) to out
+    return Parsable(curr, loc) to out
 }
