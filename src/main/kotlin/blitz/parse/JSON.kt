@@ -12,8 +12,8 @@ object JSON {
     }
 
     val jsonString = parser {
-        it.require("\"")
-            ?.untilRequire("\"") { str -> Str(str) }
+        it.stringWithEscape()
+            ?.mapSecond { Str(it) }
     }
 
     val jsonArray = parser {
@@ -29,6 +29,8 @@ object JSON {
 
     val jsonBool = parser { it.require("true")?.to(Bool(true)) } or
             parser { it.require("false")?.to(Bool(false)) }
+
+    val jsonNull = parser { it.require("null")?.to(Nul()) }
 
     val jsonObj = parser {
         it.require("{")
@@ -47,7 +49,7 @@ object JSON {
     }
 
     init {
-        jsonElement = (jsonArray or jsonNum or jsonString or jsonObj or jsonBool).trim()
+        jsonElement = (jsonArray or jsonNum or jsonString or jsonObj or jsonBool or jsonNull).trim()
     }
 
     interface Element {
@@ -62,6 +64,7 @@ object JSON {
         fun isStr() = this is Str
         fun isObj() = this is Obj
         fun isBool() = this is Bool
+        fun isNul() = this is Nul
     }
 
     data class Array(val value: List<Element>): Element {
@@ -89,6 +92,8 @@ object JSON {
         override fun toString(): String =
             value.toString()
     }
+
+    class Nul: Element
 
     fun parse(string: String): Element? =
         jsonElement(Parsable(string))?.second
