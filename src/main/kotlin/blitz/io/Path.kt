@@ -30,8 +30,9 @@ value class Path(
     fun exists(): Boolean =
          SystemFileSystem.exists(toKotlinxPath())
 
-    internal fun toKotlinxPath() =
-        kotlinx.io.files.Path("", *parts)
+    fun toKotlinxPath() =
+        if (separator == '/') kotlinx.io.files.Path("/", *parts)
+        else kotlinx.io.files.Path("", *parts)
 
     private fun kotlinxMeta() =
         SystemFileSystem.metadataOrNull(toKotlinxPath())

@@ -20,6 +20,13 @@ class Matrix<T>(
         rows[y][x] = value
     }
 
+    operator fun get(pos: Pair<Int, Int>): T =
+        rows[pos.second][pos.first]
+
+    operator fun set(pos: Pair<Int, Int>, value: T) {
+        rows[pos.second][pos.first] = value
+    }
+
     fun column(col: Int): IndexableSequence<T> =
         generateSequenceWithIndex(height) { row -> this[col, row] }
 
@@ -83,6 +90,9 @@ class Matrix<T>(
             Matrix(w, h) { sx, sy -> this[x * w + sx, y * w + sy] }
         }
 
+    fun randomPos(): Pair<Int, Int> =
+        (0..<width).random() to (0..<height).random()
+
     fun toString(alignRight: Boolean): String {
         val str = stringMat()
         val widths = str.columnWidths()
@@ -118,3 +128,7 @@ fun Matrix<String>.columnWidths(): IntArray =
 
 fun Matrix<String>.lengths(): Matrix<Int> =
     Matrix(width, height) { x, y -> this[x, y].length }
+
+operator fun Matrix<Float>.plusAssign(other: Matrix<Float>) {
+    fill { x, y -> this[x, y] + other[x, y] }
+}

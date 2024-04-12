@@ -21,5 +21,24 @@ fun <A, B> Sequence<A>.limitBy(other: Sequence<B>): Sequence<A> =
             }
     }
 
+fun <T> Sequence<T>.limit(len: Int): Sequence<T> =
+    object : Sequence<T> {
+        override fun iterator() =
+            object : Iterator<T> {
+                val iter = this@limit.iterator()
+                var i = 0
+
+                override fun hasNext(): Boolean =
+                    i < len && iter.hasNext()
+
+                override fun next(): T {
+                    if (!hasNext())
+                        error("No next")
+                    i ++
+                    return iter.next()
+                }
+            }
+    }
+
 fun <A, B> IndexableSequence<A>.limitBy(other: Sequence<B>): IndexableSequence<A> =
     modifier { it.limitBy(other) }
