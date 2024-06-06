@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    implementation("me.alex_s168:blitz:0.14")
+    implementation("me.alex_s168:blitz:0.15")
 }
 ```
 

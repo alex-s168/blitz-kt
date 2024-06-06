@@ -4,6 +4,9 @@ class Either<A, B> private constructor(
     private val a: Obj<A>?,
     private val b: Obj<B>?
 ) {
+    override fun equals(other: Any?): Boolean =
+        other is Either<*, *> && other.a == a && other.b == b
+
     fun getAOrNull(): A? =
         a?.v
 
@@ -41,6 +44,12 @@ class Either<A, B> private constructor(
         if (isA) "Either<A>(${a!!.v})"
         else "Either<B>(${b!!.v})"
 
+    override fun hashCode(): Int {
+        var result = a?.hashCode() ?: 0
+        result = 31 * result + (b?.hashCode() ?: 0)
+        return result
+    }
+
     companion object {
         fun <A, B> ofA(a: A): Either<A, B> =
             Either(Obj.of(a), null)
@@ -52,3 +61,27 @@ class Either<A, B> private constructor(
 
 fun <A, B, R> Either<A, B>.flatten(): R where A: R, B: R =
     getAOrNull() ?: getB()
+
+fun <A, BA, BB, BAN> Either<A, Either<BA, BB>>.mapBA(fn: (BA) -> BAN): Either<A, Either<BAN, BB>> =
+    mapB { it.mapA(fn) }
+
+fun <A, BA, BB, BBN> Either<A, Either<BA, BB>>.mapBB(fn: (BB) -> BBN): Either<A, Either<BA, BBN>> =
+    mapB { it.mapB(fn) }
+
+fun <AA, AB, B, AAN> Either<Either<AA, AB>, B>.mapAA(fn: (AA) -> AAN): Either<Either<AAN, AB>, B> =
+    mapA { it.mapA(fn) }
+
+fun <AA, AB, B, ABN> Either<Either<AA, AB>, B>.mapAB(fn: (AB) -> ABN): Either<Either<AA, ABN>, B> =
+    mapA { it.mapB(fn) }
+
+fun <AA, AB, B> Either<Either<AA, AB>, B>.getAAOrNull(): AA? =
+    getAOrNull()?.getAOrNull()
+
+fun <AA, AB, B> Either<Either<AA, AB>, B>.getABOrNull(): AB? =
+    getAOrNull()?.getBOrNull()
+
+fun <A, BA, BB> Either<A, Either<BA, BB>>.getBAOrNull(): BA? =
+    getBOrNull()?.getAOrNull()
+
+fun <A, BA, BB> Either<A, Either<BA, BB>>.getBBOrNull(): BB? =
+    getBOrNull()?.getBOrNull()

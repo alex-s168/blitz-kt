@@ -25,3 +25,6 @@ fun <T> MutableList<T>.removeLastInto(count: Int, dest: MutableList<T> = mutable
     }
     return dest
 }
+
+fun <T> MutableList<T>.addFront(value: T) =
+    add(0, value)

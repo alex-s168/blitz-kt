@@ -12,6 +12,11 @@ interface Obj<T> {
 
                 override fun toString(): String =
                     "Obj($v)"
+
+                override fun equals(other: Any?): Boolean =
+                    (other is Obj<*>) && v == other.v
+
+                override fun hashCode(): Int = v.hashCode()
             }
     }
 }
@@ -32,6 +37,11 @@ interface MutObj<T> {
 
                 override fun toString(): String =
                     "MutObj($v)"
+
+                override fun equals(other: Any?): Boolean =
+                    (other is Obj<*>) && v == other.v
+
+                override fun hashCode(): Int = v.hashCode()
             }
 
         fun <T> mutex(v: T): MutObj<T> =
@@ -43,6 +53,11 @@ interface MutObj<T> {
 
                 override fun toString(): String =
                     "MutMutexObj($v)"
+
+                override fun equals(other: Any?): Boolean =
+                    (other is Obj<*>) && v == other.v
+
+                override fun hashCode(): Int = v.hashCode()
             }
     }
 }
