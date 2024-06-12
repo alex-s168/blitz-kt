@@ -1,5 +1,6 @@
 package blitz.collections
 
+import blitz.str.MutMultiLineString
 import kotlin.math.min
 
 class Matrix<T>(
@@ -27,8 +28,22 @@ class Matrix<T>(
         rows[pos.second][pos.first] = value
     }
 
+    fun row(row: Int): IndexableSequence<T> =
+        rows[row].asSequence().asIndexable()
+
     fun column(col: Int): IndexableSequence<T> =
         generateSequenceWithIndex(height) { row -> this[col, row] }
+
+    fun elements(): Sequence<T> =
+        rows.asSequence().flatten()
+
+    fun elementsWithIndexes(): Sequence<Pair<T, Pair<Int, Int>>> =
+        rows.asSequence()
+            .flatMapIndexed { row, ts ->
+                ts.mapIndexed { col, t ->
+                    t to (col to row)
+                }
+            }
 
     fun fill(fn: (x: Int, y: Int) -> T) {
         repeat(height) { row ->
@@ -95,19 +110,23 @@ class Matrix<T>(
 
     fun toString(alignRight: Boolean): String {
         val str = stringMat()
+
         val widths = str.columnWidths()
-        val out = StringBuilder()
+        val heights = str.rowHeights()
 
-        val padfn = if (alignRight) String::padStart else String::padEnd
+        val out = MutMultiLineString(' ')
 
+        var y = 0
         str.rows.forEachIndexed { row, elems ->
-            if (row > 0)
-                out.append('\n')
-            elems.forEachIndexed { col, x ->
-                if (col > 0)
-                    out.append(' ')
-                out.append(padfn(x, widths[col], ' '))
+            var x = 0
+            elems.forEachIndexed { col, elem ->
+                if (alignRight)
+                    out[y, x + widths[col] - elem.lines().maxOf { it.length }] = MutMultiLineString.from(elem, ' ')
+                else
+                    out[y, x] = elem
+                x += widths[col] + 1
             }
+            y += heights[row] + 1
         }
 
         return out.toString()
@@ -124,7 +143,10 @@ class Matrix<T>(
 }
 
 fun Matrix<String>.columnWidths(): IntArray =
-    IntArray(width) { col -> column(col).maxOf { it.length } }
+    IntArray(width) { col -> column(col).maxOf { it.lines().maxOf { it.length } } }
+
+fun Matrix<String>.rowHeights(): IntArray =
+    IntArray(height) { row -> row(row).maxOf { it.lines().size } }
 
 fun Matrix<String>.lengths(): Matrix<Int> =
     Matrix(width, height) { x, y -> this[x, y].length }
