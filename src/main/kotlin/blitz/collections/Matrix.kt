@@ -58,7 +58,7 @@ class Matrix<T>(
     }
 
     fun transposeCopy(): Matrix<T> =
-        Matrix(width, height) { x, y -> this[y, x] }
+        Matrix(height, width) { x, y -> this[y, x] }
 
     fun perfectSquareCopy(): Matrix<T> =
         min(width, height).let { wh ->
