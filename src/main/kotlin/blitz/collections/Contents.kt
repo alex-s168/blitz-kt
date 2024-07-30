@@ -3,6 +3,13 @@ package blitz.collections
 class Contents<T> internal constructor(
     private val iterable: Iterable<T>
 ): Iterable<T> {
+    operator fun plus(other: Contents<T>): Contents<T> {
+        val li = mutableListOf<T>()
+        li.addAll(this)
+        li.addAll(other)
+        return li.contents
+    }
+
     override fun iterator(): Iterator<T> =
         iterable.iterator()
 
