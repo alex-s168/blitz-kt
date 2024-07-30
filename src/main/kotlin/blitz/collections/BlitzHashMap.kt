@@ -1,5 +1,7 @@
 package blitz.collections
 
+import kotlin.math.abs
+
 class BlitzHashMap<K, V>(
     private val bucketCount: Int = 16,
     private val bucketSrc: DynBuckets<K, V>,
@@ -8,7 +10,7 @@ class BlitzHashMap<K, V>(
     private val buckets = Array(bucketCount) { bucketSrc.new() }
 
     override fun index(key: K): Index<K,V> =
-        IndexImpl(buckets[hash(key) % bucketCount], key)
+        IndexImpl(buckets[abs(hash(key)) % bucketCount], key)
 
     private inline fun index(idx: Index<K,V>) =
         idx as IndexImpl
