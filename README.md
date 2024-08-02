@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    implementation("me.alex_s168:blitz:0.19")
+    implementation("me.alex_s168:blitz:0.20")
 }
 ```
 
@@ -235,7 +235,11 @@ val json = """
 """
 println(JSON.parse(json)!!.obj["b"]!!.obj["1"]!!.num)
 ```
-### Either
-No example yet
-### Tree
-No example yet
+### Features without examples
+- `Either<A, B>`
+- `Tree`
+- `ByteVec`
+- `BlitzHashMap`
+- `Dense16x16BoolMap`
+- `DenseIx16x16BoolMap`
+- `SlicedIntKeyMap`

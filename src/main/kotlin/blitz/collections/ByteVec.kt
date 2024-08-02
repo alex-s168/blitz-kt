@@ -1,9 +1,22 @@
 package blitz.collections
 
-class ByteVec(initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
+import kotlin.contracts.ExperimentalContracts
+import kotlin.contracts.contract
+
+class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
     override var size = 0
     private var cap = initCap
     private var array = ByteArray(initCap)
+
+    override fun clear() {
+        size = 0
+        if (array.size <= initCap) {
+            cap = array.size
+        } else {
+            cap = initCap
+            array = ByteArray(initCap)
+        }
+    }
 
     fun copyAsArray(): ByteArray =
         array.copyOfRange(0, size)
@@ -29,10 +42,58 @@ class ByteVec(initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
             size --
         }
 
+    fun tryPopPack(dest: ByteArray, destOff: Int = 0): Int {
+        val can = kotlin.math.min(size, dest.size - destOff)
+        copyIntoArray(dest, destOff, size - can)
+        reserve(-can)
+        size -= can
+        return can
+    }
+
     fun popBack(dest: ByteArray, destOff: Int = 0) {
-        copyIntoArray(dest, destOff, size - dest.size)
-        reserve(-dest.size)
-        size -= dest.size
+        val destCopySize = dest.size - destOff
+        require(size >= destCopySize)
+        copyIntoArray(dest, destOff, size - destCopySize)
+        reserve(-destCopySize)
+        size -= destCopySize
+    }
+
+    @OptIn(ExperimentalContracts::class)
+    inline fun consumePopBack(batching: ByteArray, fn: (ByteArray, Int) -> Unit) {
+        contract {
+            callsInPlace(fn)
+        }
+
+        while (true) {
+            val rem = tryPopPack(batching)
+            if (rem == 0) break
+
+            fn(batching, rem)
+        }
+    }
+
+    inline fun consumePopBack(batching: ByteArray, fn: (Byte) -> Unit) =
+        consumePopBack(batching) { batch, count ->
+            repeat(count) {
+                fn(batch[it])
+            }
+        }
+
+    @OptIn(ExperimentalContracts::class)
+    inline fun consumePopBackSlicedBatches(batching: ByteArray, fn: (ByteArray) -> Unit) {
+        contract {
+            callsInPlace(fn)
+        }
+
+        while (true) {
+            val rem = tryPopPack(batching)
+            if (rem == 0) break
+
+            if (rem == batching.size)
+                fn(batching)
+            else
+                fn(batching.copyOf(rem))
+        }
     }
 
     override fun get(index: Int): Byte =

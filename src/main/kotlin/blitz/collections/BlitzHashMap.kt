@@ -37,11 +37,10 @@ class BlitzHashMap<K, V>(
         val key: K,
     ): Index<K,V>
 
-    override val contents: Contents<Pair<K, V>>
-        get() = buckets
+    override fun contents(): Contents<Pair<K, V>> = buckets
             .map { bucketSrc.contents(it) }
             .reduce { acc, pairs -> acc + pairs }
 
-    val bucketStats
-        get() = Contents(buckets.map { bucketSrc.contents(it).count() })
+    fun bucketStats() =
+        Contents(buckets.map { bucketSrc.contents(it).count() })
 }

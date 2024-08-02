@@ -7,6 +7,7 @@ import kotlin.math.ceil
 
 // TODO: make it hybrid to a real bitset if a lot of elements
 
+@Deprecated(message = "slow")
 class BitVec private constructor(
     private val byteVec: ByteVec
 ): Vec<Boolean> {
@@ -49,6 +50,10 @@ class BitVec private constructor(
 
     override fun set(index: Int, value: Boolean) {
         byteVec[index] = value.toByte()
+    }
+
+    override fun clear() {
+        byteVec.clear()
     }
 
     companion object {

@@ -28,4 +28,6 @@ interface Vec<T>: IndexableSequence<T> {
     }
 
     operator fun set(index: Int, value: T)
+
+    fun clear()
 }

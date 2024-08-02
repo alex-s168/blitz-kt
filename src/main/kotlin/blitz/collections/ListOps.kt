@@ -28,3 +28,6 @@ fun <T> MutableList<T>.removeLastInto(count: Int, dest: MutableList<T> = mutable
 
 fun <T> MutableList<T>.addFront(value: T) =
     add(0, value)
+
+fun <T: Any> Iterable<T?>.countNotNull() =
+    count { it != null }
