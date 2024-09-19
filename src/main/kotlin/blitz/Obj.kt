@@ -30,7 +30,7 @@ fun <I, O> Obj<I>.map(transform: (I) -> O): Obj<O> =
 interface MutObj<T> {
     var v: T
 
-    inline fun modify(fn: (T) -> T) {
+    fun modify(fn: (T) -> T) {
         v = fn(v)
     }
 

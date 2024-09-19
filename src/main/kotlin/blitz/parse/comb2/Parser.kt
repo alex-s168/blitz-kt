@@ -1,7 +1,11 @@
 package blitz.parse.comb2
 
 import blitz.Either
-import blitz.partiallyFlatten
+import blitz.Provider
+import blitz.collections.contents
+import blitz.partiallyFlattenA
+import blitz.partiallyFlattenB
+import blitz.str.charsToString
 
 data class ParseCtx<I>(
     val input: List<I>,
@@ -31,7 +35,7 @@ fun <I, M, O> Parser<I, M>.then(other: Parser<I, O>): Parser<I, Pair<M, O>> =
         invoke(ctx).mapA { first ->
             other.invoke(ctx)
                 .mapA { first to it }
-        }.partiallyFlatten()
+        }.partiallyFlattenA()
     }
 
 fun <I, O, T> Parser<I, O>.thenIgnore(other: Parser<I, T>): Parser<I, O> =
@@ -39,23 +43,50 @@ fun <I, O, T> Parser<I, O>.thenIgnore(other: Parser<I, T>): Parser<I, O> =
         invoke(ctx).mapA { first ->
             other.invoke(ctx)
                 .mapA { first }
-        }.partiallyFlatten()
+        }.partiallyFlattenA()
     }
 
-fun <I, O> Parser<I, O>.orElse(other: Parser<I, O>): Parser<I, O> =
+fun <I, O> Parser<I, O>.orElseVal(value: O): Parser<I, O> =
+    orElse { Either.ofA(value) }
+
+fun <I, O: Any> Parser<I, O>.orNot(): Parser<I, O?> =
+    orElse { Either.ofA(null) }
+
+fun <I, O, R> Parser<I, O>.orElse(other: Parser<I, R>): Parser<I, R> where O: R =
     {
         val old = it.copy()
         this(it).mapB { err ->
             it.loadFrom(old)
             other.invoke(it)
                 .mapB { err + it }
-        }.partiallyFlatten()
+        }.partiallyFlattenB()
     }
+
+fun <I, O> choose(possible: Iterable<Parser<I, O>>): Parser<I, O> =
+    { ctx ->
+        val errors = mutableListOf<ParseError>()
+        var res: O? = null
+        for (p in possible) {
+            val old = ctx.copy()
+            val t = p.invoke(ctx)
+            if (t.isA) {
+                res = t.getA()
+                break
+            } else {
+                ctx.loadFrom(old)
+                errors += t.getB()
+            }
+        }
+        res?.let { Either.ofA(it) }
+            ?: Either.ofB(errors)
+    }
+
+fun <I, O> choose(vararg possible: Parser<I, O>): Parser<I, O> =
+    choose(possible.toList())
 
 fun <I, O> Parser<I, O>.repeated(): Parser<I, List<O>> =
     { ctx ->
         val out = mutableListOf<O>()
-        var ret: List<ParseError>? = null
         while (true) {
             val old = ctx.copy()
             val t = invoke(ctx)
@@ -63,28 +94,18 @@ fun <I, O> Parser<I, O>.repeated(): Parser<I, List<O>> =
                 out += t.getA()
             } else {
                 ctx.loadFrom(old)
-                ret = t.getB()
                 break
             }
         }
-        if (ret == null) {
-            Either.ofA(out)
-        } else Either.ofB(ret)
+        Either.ofA(out)
     }
-
-fun <I, O> Parser<I, O>.delimitedBy(delim: Parser<I, O>): Parser<I, List<O>> =
-    thenIgnore(delim)
-        .repeated()
-        .then(this)
-        .mapValue { (a, b) -> a + b }
-        .orElse(value(listOf()))
 
 inline fun <I, O> Parser<I, O>.verifyValue(crossinline verif: (O) -> String?): Parser<I, O> =
     { ctx ->
         invoke(ctx).mapA<ParseResult<O>> {
             verif(it)?.let { Either.ofB(listOf(ParseError(ctx.idx, it))) }
                 ?: Either.ofA(it)
-        }.partiallyFlatten()
+        }.partiallyFlattenA()
     }
 
 inline fun <I, O> Parser<I, Pair<IntRange, O>>.verifyValueWithSpan(crossinline fn: (O) -> String?): Parser<I, O> =
@@ -92,7 +113,7 @@ inline fun <I, O> Parser<I, Pair<IntRange, O>>.verifyValueWithSpan(crossinline f
         invoke(ctx).mapA<ParseResult<O>> { (span, v) ->
             fn(v)?.let { Either.ofB(listOf(ParseError(span.first, it))) }
                 ?: Either.ofA(v)
-        }.partiallyFlatten()
+        }.partiallyFlattenA()
     }
 
 fun <I, O: Any?> Parser<I, O?>.errIfNull(msg: String = "parser value was null internally"): Parser<I, O> =
@@ -116,20 +137,56 @@ fun <I, O> withSpan(p: Parser<I, O>): Parser<I, Pair<IntRange, O>> =
 fun <I, O> value(value: O): Parser<I, O> =
     { Either.ofA(value) }
 
-fun whitespaces(): Parser<Char, String> =
-    regex("\\s+")
+fun <I, O> chain(parsers: List<Parser<I, O>>): Parser<I, List<O>> =
+    { ctx ->
+        val results = mutableListOf<O>()
+        val errs = mutableListOf<ParseError>()
+        for (p in parsers) {
+            val r = p.invoke(ctx)
+            if (r.isA) {
+                results += r.getA()
+            } else {
+                errs += r.getB()
+                break
+            }
+        }
+        if (errs.isNotEmpty()) Either.ofB(errs)
+        else Either.ofA(results)
+    }
+
+fun <I> seq(want: List<I>): Parser<I, List<I>> =
+    chain(want.map(::just))
+
+inline fun <I> filter(msg: String, crossinline filter: (I) -> Boolean): Parser<I, I> =
+    { ctx ->
+        if (ctx.idx >= ctx.input.size) {
+            Either.ofB(listOf(ParseError(ctx.idx, "unexpected end of file")))
+        } else {
+            val i = ctx.input[ctx.idx++]
+            if (filter(i)) Either.ofA(i)
+            else Either.ofB(listOf(ParseError(ctx.idx - 1, msg)))
+        }
+    }
 
 fun <I> just(want: I): Parser<I, I> =
-    { ctx ->
-        val i = ctx.input[ctx.idx ++]
-        if (i == want) Either.ofA(i)
-        else Either.ofB(listOf(ParseError(ctx.idx - 1, "expected $want")))
-    }
+    filter("expected $want") { it == want }
+
+fun <I> oneOf(possible: Iterable<I>): Parser<I, I> =
+    filter("expected one of ${possible.contents}") { it in possible }
+
+fun <I, O> future(prov: Provider<Parser<I, O>>): Parser<I, O> =
+    { prov()(it) }
+
+inline fun <I, O> futureRec(crossinline fn: (future: Parser<I, O>) -> Parser<I, O>): Parser<I, O> {
+    lateinit var f: Parser<I, O>
+    f = fn(future { f })
+    return f
+}
 
 /** group values 0 is the entire match */
 fun <O> regex(pattern: Regex, fn: (groups: MatchGroupCollection) -> O): Parser<Char, O> =
     { ctx ->
-        pattern.matchAt(ctx.input.toString(), ctx.idx)?.let {
+        pattern.matchAt(ctx.input.charsToString(), ctx.idx)?.let {
             ctx.idx = it.range.last + 1
             Either.ofA(fn(it.groups))
         } ?: Either.ofB(listOf(

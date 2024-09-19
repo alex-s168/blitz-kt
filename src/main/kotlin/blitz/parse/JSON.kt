@@ -1,55 +1,57 @@
 package blitz.parse
 
-import blitz.parse.comb.*
+import blitz.parse.comb2.*
 
 object JSON {
-    lateinit var jsonElement: Parser<Element>
+    val jsonElement = futureRec { jsonElement: Parser<Char, Element> ->
 
-    val jsonNum = parser {
-        it.map(NumParse.float)?.mapSecond { n ->
-            Number(n)
-        }
-    }
+        val jsonNum: Parser<Char, Element> = floatLit()
+            .mapValue(::Number)
 
-    val jsonString = parser {
-        it.stringWithEscape()
-            ?.mapSecond { Str(it) }
-    }
+        val jsonString: Parser<Char, Element> = stringLit()
+            .mapValue(::Str)
 
-    val jsonArray = parser {
-        it.require("[")
-            ?.array(",") { elem ->
-                elem.whitespaces()
-                    .map(jsonElement)
-                    ?.whitespaces()
-            }
-            ?.require("]")
-            ?.mapSecond { x -> Array(x) }
-    }
+        val jsonArray: Parser<Char, Element> = just('[')
+            .then(jsonElement
+                .delimitedBy(just(','))
+                .mapValue(::Array))
+            .thenIgnore(whitespaces())
+            .thenIgnore(just(']'))
+            .mapValue { it.second }
 
-    val jsonBool = parser { it.require("true")?.to(Bool(true)) } or
-            parser { it.require("false")?.to(Bool(false)) }
+        val jsonBool: Parser<Char, Element> = choose(
+            seq("true".toList()).mapValue { Bool(true) },
+            seq("false".toList()).mapValue { Bool(false) },
+        )
 
-    val jsonNull = parser { it.require("null")?.to(Nul()) }
+        val jsonNull: Parser<Char, Element> = seq("null".toList())
+            .mapValue { Nul() }
 
-    val jsonObj = parser {
-        it.require("{")
-            ?.array(",") { elem ->
-                elem.whitespaces()
-                    .map(jsonString)
-                    ?.mapSecond { it.str }
-                    ?.whitespaces()
-                    ?.require(":")
-                    ?.whitespaces()
-                    ?.map(jsonElement)
-                    ?.whitespaces()
-            }
-            ?.require("}")
-            ?.mapSecond { x -> Obj(x.toMap()) }
-    }
+        val jsonObj: Parser<Char, Element> = just('{')
+            .then(
+                whitespaces()
+                .then(stringLit())
+                .mapValue { it.second }
+                .thenIgnore(whitespaces())
+                .thenIgnore(just(':'))
+                .then(jsonElement)
+                .delimitedBy(just(',')))
+            .thenIgnore(whitespaces())
+            .thenIgnore(just('}'))
+            .mapValue { Obj(it.second.toMap()) }
 
-    init {
-        jsonElement = (jsonArray or jsonNum or jsonString or jsonObj or jsonBool or jsonNull).trim()
+        whitespaces()
+            .then(choose(
+                jsonArray,
+                jsonNum,
+                jsonString,
+                jsonObj,
+                jsonBool,
+                jsonNull
+            ))
+            .thenIgnore(whitespaces())
+            .mapValue { it.second }
+
     }
 
     interface Element {
@@ -95,6 +97,6 @@ object JSON {
 
     class Nul: Element
 
-    fun parse(string: String): Element? =
-        jsonElement(Parsable(string))?.second
+    fun parse(string: String): ParseResult<Element> =
+        jsonElement(ParseCtx(string.toList(), 0))
 }
