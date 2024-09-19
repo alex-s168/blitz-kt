@@ -8,6 +8,9 @@ interface Vec<T>: IndexableSequence<T> {
     fun copy(): Vec<T>
 
     fun reserve(amount: Int)
+    fun reserve(need: Int, totalIfRealloc: Int) {
+        reserve(need)
+    }
 
     fun pushBack(elem: T)
     fun pushBack(elems: Array<T>) {
@@ -15,6 +18,10 @@ interface Vec<T>: IndexableSequence<T> {
         elems.forEach(::pushBack)
     }
     fun pushBack(elems: Collection<T>) {
+        reserve(elems.size)
+        elems.forEach(::pushBack)
+    }
+    fun pushBack(elems: Vec<T>) {
         reserve(elems.size)
         elems.forEach(::pushBack)
     }

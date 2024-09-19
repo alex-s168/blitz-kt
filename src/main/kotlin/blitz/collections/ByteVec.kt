@@ -36,6 +36,13 @@ class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
         cap = size + amount
     }
 
+    override fun reserve(need: Int, wantIfRealloc: Int)  {
+        if (need > 0 && cap - size >= need)
+            return
+        cap = size + wantIfRealloc
+        array = array.copyOf(cap)
+    }
+
     override fun popBack(): Byte =
         array[size - 1].also {
             reserve(-1)
@@ -110,7 +117,7 @@ class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
     }
 
     override fun pushBack(elem: Byte) {
-        reserve(8)
+        reserve(1, 8)
         array[size] = elem
         size ++
     }

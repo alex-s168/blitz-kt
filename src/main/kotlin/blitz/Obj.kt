@@ -21,10 +21,10 @@ interface Obj<T> {
     }
 }
 
-fun <I, O> Obj<I>?.mapNotNull(transform: (I) -> O): Obj<O>? =
+inline fun <I, O> Obj<I>?.mapNotNull(transform: (I) -> O): Obj<O>? =
     this?.v?.let { Obj.of(transform(it)) }
 
-fun <I, O> Obj<I>.map(transform: (I) -> O): Obj<O> =
+inline fun <I, O> Obj<I>.map(transform: (I) -> O): Obj<O> =
     Obj.of(transform(v))
 
 interface MutObj<T> {

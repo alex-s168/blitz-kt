@@ -1,29 +1,17 @@
 package blitz
 
-class Either<A, B> private constructor(
-    private val a: Obj<A>?,
-    private val b: Obj<B>?
+class Either<A: Any, B: Any>(
+    val a: A?,
+    val b: B?
 ) {
     override fun equals(other: Any?): Boolean =
         other is Either<*, *> && other.a == a && other.b == b
 
-    fun getAOrNull(): A? =
-        a?.v
+    fun assertA(): A =
+        (a ?: throw Exception("Value of Either is not of type A!"))
 
-    fun getA(): A =
-        (a ?: throw Exception("Value of Either is not of type A!")).v
-
-    fun getAOr(prov: Provider<A>): A =
-        getAOrNull() ?: prov()
-
-    fun getBOrNull(): B? =
-        b?.v
-
-    fun getB(): B =
-        (b ?: throw Exception("Value of Either is not of type B!")).v
-
-    fun getBOr(prov: Provider<B>): B =
-        getBOrNull() ?: prov()
+    fun assertB(): B =
+        (b ?: throw Exception("Value of Either is not of type B!"))
 
     val isA: Boolean =
         a != null
@@ -31,18 +19,9 @@ class Either<A, B> private constructor(
     val isB: Boolean =
         b != null
 
-    fun <R> then(af: (A) -> R, bf: (B) -> R): R =
-        if (isA) af(a!!.v) else bf(b!!.v)
-
-    fun <RA> mapA(transform: (A) -> RA): Either<RA, B> =
-        Either(a.mapNotNull(transform), b)
-
-    fun <RB> mapB(transform: (B) -> RB): Either<A, RB> =
-        Either(a, b.mapNotNull(transform))
-
     override fun toString(): String =
-        if (isA) "Either<A>(${a!!.v})"
-        else "Either<B>(${b!!.v})"
+        if (isA) "Either<A>(${a!!})"
+        else "Either<B>(${b!!})"
 
     override fun hashCode(): Int {
         var result = a?.hashCode() ?: 0
@@ -51,43 +30,80 @@ class Either<A, B> private constructor(
     }
 
     companion object {
-        fun <A, B> ofA(a: A): Either<A, B> =
-            Either(Obj.of(a), null)
+        inline fun <A: Any, B: Any> ofA(a: A): Either<A, B> =
+            Either(a, null)
 
-        fun <A, B> ofB(b: B): Either<A, B> =
-            Either(null, Obj.of(b))
+        inline fun <A: Any, B: Any> ofB(b: B): Either<A, B> =
+            Either(null, b)
     }
 }
 
-fun <A, B, R> Either<A, B>.flatten(): R where A: R, B: R =
-    getAOrNull() ?: getB()
+inline fun <A: Any, B: Any> Either<A, B>.getAOr(prov: Provider<A>): A =
+    a ?: prov()
 
-fun <A, A2, B> Either<A, Either<A2, B>>.partiallyFlattenB(): Either<A2, B> where A: A2 =
-    mapA<Either<A2, B>> { Either.ofA(it) }.flatten()
+inline fun <A: Any, B: Any> Either<A, B>.getBOr(prov: Provider<B>): B =
+    b ?: prov()
 
-fun <A, B, B2> Either<Either<A, B2>, B>.partiallyFlattenA(): Either<A, B2> where B: B2 =
-    mapB<Either<A, B2>> { Either.ofB(it) }.flatten()
+inline fun <A: Any, B: Any, R> Either<A, B>.then(af: (A) -> R, bf: (B) -> R): R =
+    if (isA) af(a!!) else bf(b!!)
 
-fun <A, BA, BB, BAN> Either<A, Either<BA, BB>>.mapBA(fn: (BA) -> BAN): Either<A, Either<BAN, BB>> =
+inline fun <A: Any, B: Any, RA: Any> Either<A, B>.mapA(transform: (A) -> RA): Either<RA, B> =
+    Either(a?.let(transform), b)
+
+inline fun <A: Any, B: Any> Either<A, B>.flatMapA(transform: (A) -> Either<A, B>): Either<A, B> =
+    if (a != null) {
+        transform(a)
+    } else this
+
+inline fun <A: Any, B: Any> Either<A, B>.flatMapB(transform: (B) -> Either<A, B>): Either<A, B> =
+    if (b != null) {
+        transform(b)
+    } else this
+
+@JvmName("flatMapA_changeType")
+inline fun <A: Any, B: Any, RA: Any> Either<A, B>.flatMapA(transform: (A) -> Either<RA, B>): Either<RA, B> =
+    if (a != null) {
+        transform(a)
+    } else Either.ofB(b!!)
+
+@JvmName("flatMapB_changeType")
+inline fun <A: Any, B: Any, RB: Any> Either<A, B>.flatMapB(transform: (B) -> Either<A, RB>): Either<A, RB> =
+    if (b != null) {
+        transform(b)
+    } else Either.ofA(a!!)
+
+inline fun <A: Any, B: Any, RB: Any> Either<A, B>.mapB(transform: (B) -> RB): Either<A, RB> =
+    Either(a, b?.let(transform))
+
+fun <A, B, R: Any> Either<A, B>.flatten(): R where A: R, B: R =
+    a ?: assertB()
+
+fun <A, A2: Any, B: Any> Either<A, Either<A2, B>>.partiallyFlattenB(): Either<A2, B> where A: A2 =
+    mapA { Either.ofA<A2, B>(it) }.flatten()
+
+fun <A: Any, B, B2: Any> Either<Either<A, B2>, B>.partiallyFlattenA(): Either<A, B2> where B: B2 =
+    mapB { Either.ofB<A, B2>(it) }.flatten()
+
+inline fun <A: Any, BA: Any, BB: Any, BAN: Any> Either<A, Either<BA, BB>>.mapBA(fn: (BA) -> BAN): Either<A, Either<BAN, BB>> =
     mapB { it.mapA(fn) }
 
-fun <A, BA, BB, BBN> Either<A, Either<BA, BB>>.mapBB(fn: (BB) -> BBN): Either<A, Either<BA, BBN>> =
+inline fun <A: Any, BA: Any, BB: Any, BBN: Any> Either<A, Either<BA, BB>>.mapBB(fn: (BB) -> BBN): Either<A, Either<BA, BBN>> =
     mapB { it.mapB(fn) }
 
-fun <AA, AB, B, AAN> Either<Either<AA, AB>, B>.mapAA(fn: (AA) -> AAN): Either<Either<AAN, AB>, B> =
+inline fun <AA: Any, AB: Any, B: Any, AAN: Any> Either<Either<AA, AB>, B>.mapAA(fn: (AA) -> AAN): Either<Either<AAN, AB>, B> =
     mapA { it.mapA(fn) }
 
-fun <AA, AB, B, ABN> Either<Either<AA, AB>, B>.mapAB(fn: (AB) -> ABN): Either<Either<AA, ABN>, B> =
+inline fun <AA: Any, AB: Any, B: Any, ABN: Any> Either<Either<AA, AB>, B>.mapAB(fn: (AB) -> ABN): Either<Either<AA, ABN>, B> =
     mapA { it.mapB(fn) }
 
-fun <AA, AB, B> Either<Either<AA, AB>, B>.getAAOrNull(): AA? =
-    getAOrNull()?.getAOrNull()
+fun <AA: Any, AB: Any, B: Any> Either<Either<AA, AB>, B>.getAAOrNull(): AA? =
+    a?.a
 
-fun <AA, AB, B> Either<Either<AA, AB>, B>.getABOrNull(): AB? =
-    getAOrNull()?.getBOrNull()
+fun <AA: Any, AB: Any, B: Any> Either<Either<AA, AB>, B>.getABOrNull(): AB? =
+    a?.b
 
-fun <A, BA, BB> Either<A, Either<BA, BB>>.getBAOrNull(): BA? =
-    getBOrNull()?.getAOrNull()
+fun <A: Any, BA: Any, BB: Any> Either<A, Either<BA, BB>>.getBAOrNull(): BA? =
+    b?.a
 
-fun <A, BA, BB> Either<A, Either<BA, BB>>.getBBOrNull(): BB? =
-    getBOrNull()?.getBOrNull()
+fun <A: Any, BA: Any, BB: Any> Either<A, Either<BA, BB>>.getBBOrNull(): BB? =
+    b?.b
