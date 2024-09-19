@@ -62,6 +62,12 @@ class Either<A, B> private constructor(
 fun <A, B, R> Either<A, B>.flatten(): R where A: R, B: R =
     getAOrNull() ?: getB()
 
+fun <A, B> Either<A, Either<A, B>>.partiallyFlatten(): Either<A, B> =
+    mapA<Either<A, B>> { Either.ofA(it) }.flatten()
+
+fun <A, B> Either<Either<A, B>, B>.partiallyFlatten(): Either<A, B> =
+    mapB<Either<A, B>> { Either.ofB(it) }.flatten()
+
 fun <A, BA, BB, BAN> Either<A, Either<BA, BB>>.mapBA(fn: (BA) -> BAN): Either<A, Either<BAN, BB>> =
     mapB { it.mapA(fn) }
 
