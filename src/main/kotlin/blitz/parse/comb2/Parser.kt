@@ -2,12 +2,11 @@ package blitz.parse.comb2
 
 import blitz.*
 import blitz.collections.RefVec
-import blitz.collections.contents
 import blitz.str.charsToString
 
 data class ParseCtx<I>(
-    val input: List<I>,
-    var idx: Int
+    @JvmField val input: List<I>,
+    @JvmField var idx: Int
 ) {
     fun loadFrom(old: ParseCtx<I>) {
         idx = old.idx
@@ -15,25 +14,39 @@ data class ParseCtx<I>(
 }
 
 data class ParseError(
-    val loc: Int,
-    val message: String?,
+    @JvmField val loc: Int, /** can be -1 */
+    @JvmField val message: String?,
 )
 
-typealias ParseResult<O> = Either<O, RefVec<ParseError>>
+typealias ParseResult<O> = Either<O, ParseError>
 typealias Parser<I, O> = (ParseCtx<I>) -> ParseResult<O>
 
 inline fun <I, M: Any, O: Any> mapValue(crossinline self: Parser<I, M>, crossinline fn: (M) -> O): Parser<I, O> =
-    { self(it).mapA { fn(it) } }
+    {
+        val r = self(it) as Either<Any, ParseError>
+        r.a?.let {
+            r.a = fn(it as M)
+        }
+        r as Either<O, ParseError>
+    }
 
-inline fun <I, O: Any> mapErrors(crossinline self: Parser<I, O>, crossinline fn: (RefVec<ParseError>) -> RefVec<ParseError>): Parser<I, O> =
-    { self(it).mapB { fn(it) } }
+inline fun <I, O: Any> mapErrors(crossinline self: Parser<I, O>, crossinline fn: (ParseError) -> ParseError): Parser<I, O> =
+    {
+        val r = self(it)
+        r.b?.let { r.b = fn(it) }
+        r
+    }
 
 inline fun <I, M: Any, O: Any> then(crossinline self: Parser<I, M>, crossinline other: Parser<I, O>): Parser<I, Pair<M, O>> =
     { ctx ->
-        self(ctx).flatMapA<_,_,Pair<M,O>> { first ->
-            other.invoke(ctx)
-                .mapA { first to it }
-        }
+        val r0 = self(ctx) as ParseResult<Any>
+        r0.a?.let { first ->
+            val r1 = other(ctx)
+            r1.a?.let { second ->
+                (r1 as ParseResult<Any>).a = Pair(first, second)
+                (r1 as ParseResult<Pair<M, O>>)
+            } ?: (r1 as ParseResult<Pair<M, O>>)
+        } ?: (r0 as ParseResult<Pair<M, O>>)
     }
 
 inline fun <I, M: Any, O: Any> thenOverwrite(crossinline self: Parser<I, M>, crossinline other: Parser<I, O>): Parser<I, O> =
@@ -57,42 +70,59 @@ inline fun <I, O: Any> orElseVal(crossinline self: Parser<I, O>, value: O): Pars
 inline fun <I, O, R: Any> orElse(crossinline self: Parser<I, O>, crossinline other: Parser<I, R>): Parser<I, R> where O: R =
     {
         val old = it.idx
-        self(it).mapB { err ->
+        self(it).mapB { _ ->
             it.idx = old
             other.invoke(it)
-                .mapB { err.pushBack(it); err }
         }.partiallyFlattenB()
     }
 
+/** Use the other choose that takes a function whenever possible because of perf */
 fun <I, O: Any> choose(possible: Iterable<Parser<I, O>>): Parser<I, O> =
     { ctx ->
-        val errors = RefVec<ParseError>(possible.count())
         var res: O? = null
         for (p in possible) {
             val old = ctx.idx
             val t = p.invoke(ctx)
-            if (t.isA) {
+            if (t.isA()) {
                 res = t.a!!
                 break
             } else {
                 ctx.idx = old
-                errors.pushBack(t.b!!)
             }
         }
         res?.let { Either.ofA(it) }
-            ?: Either.ofB(errors)
+            ?: Either.ofB(ParseError(ctx.idx, "none of the possible parsers match"))
     }
 
-fun <I, O: Any> choose(vararg possible: Parser<I, O>): Parser<I, O> =
+inline fun <I, O: Any> choose(crossinline fn: (run: (Parser<I, O>) -> Unit) -> Unit): Parser<I, O> =
+    { ctx ->
+        var res: O? = null
+        fn { p ->
+            if (res == null) {
+                val old = ctx.idx
+                val t = p.invoke(ctx)
+                if (t.isA()) {
+                    res = t.a!!
+                } else {
+                    ctx.idx = old
+                }
+            }
+        }
+        res?.let { Either.ofA(it) }
+            ?: Either.ofB(ParseError(ctx.idx, "none of the possible parsers match"))
+    }
+
+/** Use the other choose that takes a function whenever possible because of perf */
+inline fun <I, O: Any> choose(vararg possible: Parser<I, O>): Parser<I, O> =
     choose(possible.toList())
 
 inline fun <I, O: Any> repeated(crossinline what: Parser<I, O>): Parser<I, RefVec<O>> =
     { ctx ->
-        val out = RefVec<O>(0)
+        val out = RefVec<O>(16)
         while (true) {
             val old = ctx.idx
             val t = what(ctx)
-            if (t.isA) {
+            if (t.isA()) {
                 out.pushBack(t.a!!)
             } else {
                 ctx.idx = old
@@ -107,7 +137,7 @@ inline fun <I, O: Any> repeatedNoSave(crossinline what: Parser<I, O>): Parser<I,
         while (true) {
             val old = ctx.idx
             val t = what(ctx)
-            if (t.isB) {
+            if (t.isB()) {
                 ctx.idx = old
                 break
             }
@@ -118,7 +148,7 @@ inline fun <I, O: Any> repeatedNoSave(crossinline what: Parser<I, O>): Parser<I,
 inline fun <I, O: Any> verifyValue(crossinline self: Parser<I, O>, crossinline verif: (O) -> String?): Parser<I, O> =
     { ctx ->
         self(ctx).flatMapA<_,_,_> {
-            verif(it)?.let { Either.ofB(RefVec.of(ParseError(ctx.idx, it))) }
+            verif(it)?.let { Either.ofB(ParseError(ctx.idx, it)) }
                 ?: Either.ofA(it)
         }
     }
@@ -126,7 +156,7 @@ inline fun <I, O: Any> verifyValue(crossinline self: Parser<I, O>, crossinline v
 inline fun <I, O: Any> verifyValueWithSpan(crossinline self: Parser<I, Pair<IntRange, O>>, crossinline fn: (O) -> String?): Parser<I, O> =
     { ctx ->
         self(ctx).flatMapA<_,_,_> { (span, v) ->
-            fn(v)?.let { Either.ofB(RefVec.of(ParseError(span.first, it))) }
+            fn(v)?.let { Either.ofB(ParseError(span.first, it)) }
                 ?: Either.ofA(v)
         }
     }
@@ -137,7 +167,7 @@ inline fun <I, O: Any> location(crossinline fn: (Int) -> O): Parser<I, O> =
 inline fun <I> location(): Parser<I, Int> =
     location { it }
 
-inline fun <I, O: Any> withSpan(crossinline p: Parser<I, O>): Parser<I, Pair<IntRange, O>> =
+fun <I, O: Any> withSpan(p: Parser<I, O>): Parser<I, Pair<IntRange, O>> =
     mapValue(then(then(location(), p), location())) { (beginAndV, end) ->
         (beginAndV.first..end) to beginAndV.second
     }
@@ -148,17 +178,17 @@ inline fun <I, O: Any> value(value: O): Parser<I, O> =
 fun <I, O: Any> chain(parsers: List<Parser<I, O>>): Parser<I, RefVec<O>> =
     { ctx ->
         val results = RefVec<O>(parsers.size)
-        val errs = RefVec<ParseError>(0)
+        var errs: ParseError? = null
         for (p in parsers) {
             val r = p.invoke(ctx)
-            if (r.isA) {
+            if (r.isA()) {
                 results.pushBack(r.a!!)
             } else {
-                errs.pushBack(r.b!!)
+                errs = r.b!!
                 break
             }
         }
-        if (errs.size != 0) Either.ofB(errs)
+        if (errs != null) Either.ofB(errs)
         else Either.ofA(results)
     }
 
@@ -168,19 +198,34 @@ inline fun <I: Any> seq(want: List<I>): Parser<I, RefVec<I>> =
 inline fun <I: Any> filter(msg: String, crossinline filter: (I) -> Boolean): Parser<I, I> =
     { ctx ->
         if (ctx.idx >= ctx.input.size) {
-            Either.ofB(RefVec.of(ParseError(ctx.idx, "unexpected end of file")))
+            Either.ofB(ParseError(ctx.idx, "unexpected end of file"))
         } else {
             val i = ctx.input[ctx.idx++]
             if (filter(i)) Either.ofA(i)
-            else Either.ofB(RefVec.of(ParseError(ctx.idx - 1, msg)))
+            else Either.ofB(ParseError(ctx.idx - 1, msg))
         }
     }
 
-inline fun <I: Any> just(want: I): Parser<I, I> =
-    filter("expected $want") { it == want }
+private class JustParse<I: Any>(wantIn: I): Parser<I, I> {
+    @JvmField val want = wantIn
+    @JvmField val uef: ParseResult<I> = Either.ofB(ParseError(-1, "unexpected end of file"))
+    @JvmField val exdiff: ParseResult<I> = Either.ofB(ParseError(-1,  "expected $wantIn"))
+    @JvmField val eitherOfWant: ParseResult<I> = Either.ofA(want)
+    override fun invoke(ctx: ParseCtx<I>): ParseResult<I> {
+        return if (ctx.idx >= ctx.input.size) uef
+        else {
+            val i = ctx.input[ctx.idx++]
+            if (i == want) eitherOfWant
+            else exdiff
+        }
+    }
+}
+
+fun <I: Any> just(wantIn: I): Parser<I, I> =
+    JustParse(wantIn)
 
 inline fun <I: Any> oneOf(possible: Iterable<I>): Parser<I, I> =
-    filter("expected one of ${possible.contents}") { it in possible }
+    filter("expected different") { it in possible }
 
 inline fun <I, O: Any> future(crossinline prov: Provider<Parser<I, O>>): Parser<I, O> =
     { prov()(it) }
@@ -197,9 +242,9 @@ fun <O: Any> regex(pattern: Regex, fn: (groups: MatchGroupCollection) -> O): Par
         pattern.matchAt(ctx.input.charsToString(), ctx.idx)?.let {
             ctx.idx = it.range.last + 1
             Either.ofA(fn(it.groups))
-        } ?: Either.ofB(RefVec.of(
+        } ?: Either.ofB(
             ParseError(ctx.idx, "regular expression \"$pattern\" does not apply")
-        ))
+        )
     }
 
 fun regex(pattern: Regex) = regex(pattern) { it[0]!!.value }

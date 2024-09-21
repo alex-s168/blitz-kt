@@ -5,30 +5,33 @@ import blitz.str.charsToString
 import kotlin.math.absoluteValue
 import kotlin.math.sign
 
-fun whitespaces(): Parser<Char, Unit> =
-    repeatedNoSave(oneOf("\n\t\r\b ".toList()))
+private fun isWhitespace(it: Char) =
+    it == ' ' || it == '\n' || it == '\t' || it == '\r' || it == '\b'
+val whitespaces: Parser<Char, Unit> =
+    repeatedNoSave(filter("expected whitespace", ::isWhitespace))
 
-fun digit(): Parser<Char, Char> =
-    oneOf("0123456789".toList())
+val digit: Parser<Char, Char> =
+    filter("expected digit") { it >= '0' && it <= '9' }
 
-fun uintLit(): Parser<Char, RefVec<Char>> =
-    verifyValueWithSpan(withSpan(repeated(digit())))
+val uintLit: Parser<Char, RefVec<Char>> =
+    verifyValueWithSpan(withSpan(repeated(digit)))
              { if (it.size == 0) "need digits after sign in num lit" else null }
 
-fun intLit(): Parser<Char, Int> =
-    mapValue(then(choose(mapValue(just('+')) { +1 },
-               mapValue(just('-')) { -1 },
-               value(+1)),
-            uintLit()))
+val intLit: Parser<Char, Int> =
+    mapValue(then(choose<Char,Int> {
+        it(mapValue(just('+')) { +1 })
+        it(mapValue(just('-')) { -1 })
+        it(value(+1))
+     }, uintLit))
     { (sign, v) -> sign * v.charsToString().toInt() }
 
-fun floatLit(): Parser<Char, Double> =
+val floatLit: Parser<Char, Double> =
     mapValue(
             then(
                 thenIgnore(
-                    intLit(),
+                    intLit,
                     just('.')),
-                orElseVal(uintLit(), RefVec.of('0'))))
+                orElseVal(uintLit, RefVec.of('0'))))
     { (pre, post) ->
         var p = post.charsToString().toDouble()
         while (p.absoluteValue >= 1) {
@@ -38,22 +41,26 @@ fun floatLit(): Parser<Char, Double> =
         (pre.toDouble().absoluteValue + p) * pre.toDouble().sign
     }
 
-fun escapeChar(): Parser<Char, Char> =
+val escapeChar: Parser<Char, Char> =
     thenOverwrite(just('\\'),
-        mapErrors(choose(just('"'),
-               just('\''),
-               just('\\'),
-               mapValue(just('n')) { '\n' },
-               mapValue(just('r')) { '\r' },
-               mapValue(just('b')) { '\b' },
-               mapValue(just('t')) { '\t' }))
-        { RefVec.of(ParseError(it[0].loc, "invalid escape sequence")) }
+        mapErrors(choose {
+            it(just('"'))
+            it(just('\''))
+            it(just('\\'))
+            it(mapValue(just('n')) { '\n' })
+            it(mapValue(just('r')) { '\r' })
+            it(mapValue(just('b')) { '\b' })
+            it(mapValue(just('t')) { '\t' })
+        })
+        { ParseError(it.loc, "invalid escape sequence") }
     )
 
-fun stringLit(): Parser<Char, String> =
+val stringLit: Parser<Char, String> =
     mapValue(thenIgnore(then(just('"'),
-        repeated(choose(escapeChar(),
-            filter("a") { it != '"' }))),
+        repeated(choose<Char,Char>{
+            it(escapeChar)
+            it(filter("a") { it != '"' })
+        })),
         just('"')))
     { (_, str) -> str.charsToString() }
 
