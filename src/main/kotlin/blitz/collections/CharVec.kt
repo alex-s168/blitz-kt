@@ -3,10 +3,10 @@ package blitz.collections
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
-class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
+class CharVec(private val initCap: Int = 0): Vec<Char>, BatchSequence<Char> {
     override var size = 0
     private var cap = initCap
-    private var array = ByteArray(initCap)
+    private var array = CharArray(initCap)
 
     override fun clear() {
         size = 0
@@ -14,21 +14,18 @@ class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
             cap = array.size
         } else {
             cap = initCap
-            array = ByteArray(initCap)
+            array = CharArray(initCap)
         }
     }
 
-    fun unsafeBackingArr(): ByteArray =
-        array
-
-    fun copyAsArray(): ByteArray =
+    fun copyAsArray(): CharArray =
         array.copyOfRange(0, size)
 
-    fun copyIntoArray(arr: ByteArray, destOff: Int = 0, startOff: Int = 0) =
+    fun copyIntoArray(arr: CharArray, destOff: Int = 0, startOff: Int = 0) =
         array.copyInto(arr, destOff, startOff, size)
 
-    override fun copy(): ByteVec =
-        ByteVec(size).also {
+    override fun copy(): CharVec =
+        CharVec(size).also {
             copyIntoArray(it.array)
         }
 
@@ -46,13 +43,13 @@ class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
         array = array.copyOf(cap)
     }
 
-    override fun popBack(): Byte =
+    override fun popBack(): Char =
         array[size - 1].also {
             reserve(-1)
             size --
         }
 
-    fun tryPopPack(dest: ByteArray, destOff: Int = 0): Int {
+    fun tryPopPack(dest: CharArray, destOff: Int = 0): Int {
         val can = kotlin.math.min(size, dest.size - destOff)
         copyIntoArray(dest, destOff, size - can)
         reserve(-can)
@@ -60,7 +57,7 @@ class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
         return can
     }
 
-    fun popBack(dest: ByteArray, destOff: Int = 0) {
+    fun popBack(dest: CharArray, destOff: Int = 0) {
         val destCopySize = dest.size - destOff
         require(size >= destCopySize)
         copyIntoArray(dest, destOff, size - destCopySize)
@@ -69,7 +66,7 @@ class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
     }
 
     @OptIn(ExperimentalContracts::class)
-    inline fun consumePopBack(batching: ByteArray, fn: (ByteArray, Int) -> Unit) {
+    inline fun consumePopBack(batching: CharArray, fn: (CharArray, Int) -> Unit) {
         contract {
             callsInPlace(fn)
         }
@@ -82,7 +79,7 @@ class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
         }
     }
 
-    inline fun consumePopBack(batching: ByteArray, fn: (Byte) -> Unit) =
+    inline fun consumePopBack(batching: CharArray, fn: (Char) -> Unit) =
         consumePopBack(batching) { batch, count ->
             repeat(count) {
                 fn(batch[it])
@@ -90,7 +87,7 @@ class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
         }
 
     @OptIn(ExperimentalContracts::class)
-    inline fun consumePopBackSlicedBatches(batching: ByteArray, fn: (ByteArray) -> Unit) {
+    inline fun consumePopBackSlicedBatches(batching: CharArray, fn: (CharArray) -> Unit) {
         contract {
             callsInPlace(fn)
         }
@@ -106,44 +103,53 @@ class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
         }
     }
 
-    override fun get(index: Int): Byte =
+    override fun get(index: Int): Char =
         array[index]
 
     override fun flip() {
         array = array.reversedArray()
     }
 
-    fun pushBack(arr: ByteArray) {
+    fun pushBack(arr: CharArray) {
         reserve(arr.size)
         arr.copyInto(array, size)
         size += arr.size
     }
 
-    override fun pushBack(elem: Byte) {
+    override fun pushBack(elem: Char) {
         reserve(1, 8)
         array[size] = elem
         size ++
     }
 
-    override fun iterator(): ByteBatchIterator =
-        array.asSequence().asBatch().iterator().asByteBatchIterator()
+    override fun iterator(): BatchIterator<Char> =
+        array.asSequence().asBatch().iterator()
 
     override fun toString(): String =
-        joinToString(prefix = "[", postfix = "]") { "0x${it.toUByte().toString(16)}" }
+        String(array, 0, size)
 
-    override fun set(index: Int, value: Byte) {
+    fun subViewToString(from: Int, num: Int = size - from): String =
+        String(array, from, num)
+
+    override fun set(index: Int, value: Char) {
         array[index] = value
     }
 
     companion object {
-        fun from(bytes: ByteArray) =
-            ByteVec(bytes.size).also {
+        fun from(data: String) =
+            CharVec(data.length).also {
+                data.toCharArray().copyInto(it.array)
+                it.size = data.length
+            }
+
+        fun from(bytes: CharArray) =
+            CharVec(bytes.size).also {
                 bytes.copyInto(it.array)
                 it.size += bytes.size
             }
 
-        fun from(bytes: Sequence<Byte>) =
-            ByteVec().also { bv ->
+        fun from(bytes: Sequence<Char>) =
+            CharVec().also { bv ->
                 bytes.forEach(bv::pushBack)
             }
     }

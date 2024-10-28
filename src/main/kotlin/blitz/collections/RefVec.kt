@@ -89,6 +89,18 @@ class RefVec<T>(private val initCap: Int = 0): Vec<T> {
         (_array as Array<Any?>)[index] = value
     }
 
+    inline fun <R, C: MutableCollection<R>> mapTo(dest: C, fn: (T) -> R): C {
+        _array?.let {
+            for (i in 0 until size) {
+                dest.add(fn(it[i] as T))
+            }
+        }
+        return dest
+    }
+
+    inline fun <R> map(fn: (T) -> R): MutableList<R> =
+        MutableList(size) { fn(this[it]) }
+
     companion object {
         fun <T> from(data: Array<T>) =
             RefVec<T>(data.size).also {
@@ -102,8 +114,9 @@ class RefVec<T>(private val initCap: Int = 0): Vec<T> {
             }
 
         inline fun <T> of(vararg elements: T): RefVec<T> =
-            RefVec<T>(elements.size shl 2).also {
+            RefVec<T>(elements.size shl 1).also {
                 it._array?.let { elements.copyInto(it) }
+                it.size += elements.size
             }
     }
 }

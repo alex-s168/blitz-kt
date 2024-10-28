@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "me.alex_s168"
-version = "0.20"
+version = "0.22h2"
 
 repositories {
     mavenCentral()
@@ -15,9 +15,6 @@ dependencies {
     testImplementation("org.jetbrains.kotlin:kotlin-test")
     implementation("org.jetbrains.kotlinx:kotlinx-io-core:0.3.1")
     implementation("org.jetbrains.kotlinx:kotlinx-io-bytestring:0.3.1")
-
-    // https://mvnrepository.com/artifact/org.json/json
-    implementation("org.json:json:20240303")
 }
 
 tasks.test {

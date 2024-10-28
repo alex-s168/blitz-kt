@@ -114,3 +114,11 @@ fun <A: Any, BA: Any, BB: Any> Either<A, Either<BA, BB>>.getBAOrNull(): BA? =
 
 fun <A: Any, BA: Any, BB: Any> Either<A, Either<BA, BB>>.getBBOrNull(): BB? =
     b?.b
+
+inline fun <A: Any, B: Any, RA: Any, RB: Any> Either<A, B>.map(fa: (A) -> RA, fb: (B) -> RB): Either<RA, RB> =
+    if (a != null) Either.ofA(fa(a!!))
+    else Either.ofB(fb(b!!))
+
+inline fun <A: Any, B: Any, R> Either<A, B>.flatMap(fa: (A) -> R, fb: (B) -> R): R =
+    if (a != null) fa(a!!)
+    else fb(b!!)

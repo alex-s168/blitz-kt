@@ -2,6 +2,8 @@ package blitz.parse.comb2
 
 import blitz.*
 import blitz.collections.RefVec
+import blitz.collections.containsAt
+import blitz.parse.JSON.jsonElement
 import blitz.str.charsToString
 
 data class ParseCtx<I>(
@@ -192,8 +194,28 @@ fun <I, O: Any> chain(parsers: List<Parser<I, O>>): Parser<I, RefVec<O>> =
         else Either.ofA(results)
     }
 
+inline fun <I, O: Any> chain(vararg parsers: Parser<I, O>): Parser<I, RefVec<O>> =
+    chain(parsers.toList())
+
 inline fun <I: Any> seq(want: List<I>): Parser<I, RefVec<I>> =
     chain(want.map(::just))
+
+inline fun seq(want: String): Parser<Char, RefVec<Char>> =
+    chain(want.map(::just))
+
+inline fun ignoreSeq(want: String): Parser<Char, Unit> =
+    { ctx ->
+        if (ctx.idx >= ctx.input.size) {
+            Either.ofB(ParseError(ctx.idx, "unexpected end of file"))
+        } else {
+            if (ctx.input.containsAt(ctx.idx, want.toList())) {
+                ctx.idx += want.length
+                Either.ofA(Unit)
+            } else {
+                Either.ofB(ParseError(ctx.idx, "expected $want"))
+            }
+        }
+    }
 
 inline fun <I: Any> filter(msg: String, crossinline filter: (I) -> Boolean): Parser<I, I> =
     { ctx ->
@@ -254,3 +276,12 @@ fun <O: Any> regex(pattern: String, fn: (groups: MatchGroupCollection) -> O): Pa
     regex(Regex(pattern), fn)
 
 fun regex(pattern: String) = regex(pattern) { it[0]!!.value }
+
+fun <O: Any> ParseResult<O>.unwrap(): O =
+    flatMap(
+        { it },
+        { throw Exception("at ${it.loc}: ${it.message}") }
+    )
+
+fun <I, O: Any> Parser<I, O>.run(input: List<I>): ParseResult<O> =
+    this(ParseCtx(input, 0))

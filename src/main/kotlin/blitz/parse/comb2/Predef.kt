@@ -14,24 +14,24 @@ val digit: Parser<Char, Char> =
     filter("expected digit") { it >= '0' && it <= '9' }
 
 val uintLit: Parser<Char, RefVec<Char>> =
-    verifyValueWithSpan(withSpan(repeated(digit)))
-             { if (it.size == 0) "need digits after sign in num lit" else null }
+    verifyValue(repeated(digit))
+    { if (it.size == 0) "need digits after sign in num lit" else null }
 
-val intLit: Parser<Char, Int> =
-    mapValue(then(choose<Char,Int> {
+val intLit: Parser<Char, Long> =
+    mapValue(then(choose<Char, Int> {
         it(mapValue(just('+')) { +1 })
         it(mapValue(just('-')) { -1 })
         it(value(+1))
      }, uintLit))
-    { (sign, v) -> sign * v.charsToString().toInt() }
+    { (sign, v) -> sign * (v.charsToString().toLongOrNull() ?: Long.MAX_VALUE) }
 
 val floatLit: Parser<Char, Double> =
     mapValue(
             then(
-                thenIgnore(
-                    intLit,
-                    just('.')),
-                orElseVal(uintLit, RefVec.of('0'))))
+                intLit,
+                orElseVal(
+                    thenOverwrite(just('.'), uintLit),
+                    RefVec.of('0'))))
     { (pre, post) ->
         var p = post.charsToString().toDouble()
         while (p.absoluteValue >= 1) {
