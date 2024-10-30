@@ -135,6 +135,9 @@ class CharVec(private val initCap: Int = 0): Vec<Char>, BatchSequence<Char> {
         array[index] = value
     }
 
+    override fun idx(value: Char): Int =
+        array.indexOf(value)
+
     companion object {
         fun from(data: String) =
             CharVec(data.length).also {

@@ -132,6 +132,9 @@ class LongVec(private val initCap: Int = 0): Vec<Long>, BatchSequence<Long> {
         array[index] = value
     }
 
+    override fun idx(value: Long): Int =
+        array.indexOf(value)
+
     companion object {
         fun from(bytes: LongArray) =
             LongVec(bytes.size).also {

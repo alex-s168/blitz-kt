@@ -132,6 +132,9 @@ class IntVec(private val initCap: Int = 0): Vec<Int>, BatchSequence<Int> {
         array[index] = value
     }
 
+    override fun idx(value: Int): Int =
+        array.indexOf(value)
+
     companion object {
         fun from(bytes: IntArray) =
             IntVec(bytes.size).also {

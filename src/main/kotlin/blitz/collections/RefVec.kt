@@ -101,6 +101,9 @@ class RefVec<T>(private val initCap: Int = 0): Vec<T> {
     inline fun <R> map(fn: (T) -> R): MutableList<R> =
         MutableList(size) { fn(this[it]) }
 
+    override fun idx(value: T): Int =
+        _array?.indexOf(value) ?: -1
+
     companion object {
         fun <T> from(data: Array<T>) =
             RefVec<T>(data.size).also {

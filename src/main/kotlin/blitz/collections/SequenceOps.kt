@@ -42,3 +42,38 @@ fun <T> Sequence<T>.limit(len: Int): Sequence<T> =
 
 fun <A, B> IndexableSequence<A>.limitBy(other: Sequence<B>): IndexableSequence<A> =
     modifier { it.limitBy(other) }
+
+fun <T> Sequence<T>.hasLeast(n: Int): Boolean {
+    val i = iterator()
+    repeat(n) {
+        if (!i.hasNext())
+            return false
+        i.next()
+    }
+    return true
+}
+
+/** cache already computed values across iterations */
+fun <T> Sequence<T>.caching(): Sequence<T> =
+    object : Sequence<T> {
+        val cache = RefVec<T>()
+        val iter = this@caching.iterator()
+
+        override fun iterator() = object : Iterator<T> {
+            var idx = 0
+
+            override fun hasNext(): Boolean =
+                idx < cache.size || iter.hasNext()
+
+            override fun next(): T {
+                val v = if (idx < cache.size) {
+                    cache[idx]
+                } else {
+                    iter.next()
+                        .also(cache::pushBack)
+                }
+                idx ++
+                return v
+            }
+        }
+    }

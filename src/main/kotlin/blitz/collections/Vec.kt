@@ -37,4 +37,12 @@ interface Vec<T>: IndexableSequence<T> {
     operator fun set(index: Int, value: T)
 
     fun clear()
+
+    fun idx(value: T): Int {
+        for (i in 0 until size) {
+            if (this[i] == value)
+                return i
+        }
+        return -1
+    }
 }

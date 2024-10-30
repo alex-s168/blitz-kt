@@ -132,6 +132,9 @@ class ShortVec(private val initCap: Int = 0): Vec<Short>, BatchSequence<Short> {
         array[index] = value
     }
 
+    override fun idx(value: Short): Int =
+        array.indexOf(value)
+
     companion object {
         fun from(bytes: ShortArray) =
             ShortVec(bytes.size).also {

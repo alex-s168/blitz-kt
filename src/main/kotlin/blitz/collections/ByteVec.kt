@@ -135,6 +135,9 @@ class ByteVec(private val initCap: Int = 0): Vec<Byte>, ByteBatchSequence {
         array[index] = value
     }
 
+    override fun idx(value: Byte): Int =
+        array.indexOf(value)
+
     companion object {
         fun from(bytes: ByteArray) =
             ByteVec(bytes.size).also {
