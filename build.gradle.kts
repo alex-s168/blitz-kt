@@ -2,6 +2,7 @@ plugins {
     kotlin("jvm") version "1.9.21"
     application
     `maven-publish`
+    id("co.uzzu.dotenv.gradle") version "4.0.0"
 }
 
 group = "me.alex_s168"
@@ -30,6 +31,17 @@ application {
 }
 
 publishing {
+    repositories {
+        maven {
+            url = uri("http://198.7.115.119:8080/libs")
+            isAllowInsecureProtocol = true
+            credentials {
+                username = env.USER.orNull()
+                password = env.PASS.orNull()
+            }
+        }
+    }
+
     publications {
         create<MavenPublication>("maven") {
             groupId = group.toString()
