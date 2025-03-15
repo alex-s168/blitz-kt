@@ -6,7 +6,7 @@ Big Kotlin library adding features that the Kotlin standard library just does no
 repositories {
     maven {
         name = "alex's repo"
-        url = uri("http://207.180.202.42:8080/libs")
+        url = uri("http://maven.vxcc.dev/libs")
         isAllowInsecureProtocol = true
     }
 }
