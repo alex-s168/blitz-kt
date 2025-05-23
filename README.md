@@ -7,7 +7,6 @@ repositories {
     maven {
         name = "alex's repo"
         url = uri("http://maven.vxcc.dev/libs")
-        isAllowInsecureProtocol = true
     }
 }
 
