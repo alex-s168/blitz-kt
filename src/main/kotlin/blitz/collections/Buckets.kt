@@ -8,7 +8,7 @@ interface Buckets<K, V, B> {
     fun contents(bucket: B): Contents<Pair<K,V>>
 }
 
-class DynBucketsT<K, V, B>(
+class DynBucketsT<K, V, B: Any?>(
     private val parent: Buckets<K, V, B>
 ): Buckets<K, V, Any?> {
     override fun new(): Any? =

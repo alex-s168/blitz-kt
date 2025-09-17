@@ -24,6 +24,6 @@ fun <V> I3HashMap(
 ): BlitzHashMap<I3HashMapKey, V> =
     BlitzHashMap(
         bucketCount,
-        DynBuckets(SortedListBuckets(underlying)),
+        DynBucketsT<_, _, _>(SortedListBuckets(underlying)),
         I3HashMapKey::cantorHash
     )

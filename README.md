@@ -6,12 +6,12 @@ Big Kotlin library adding features that the Kotlin standard library just does no
 repositories {
     maven {
         name = "alex's repo"
-        url = uri("http://maven.vxcc.dev/libs")
+        url = uri("https://maven.vxcc.dev/libs")
     }
 }
 
 dependencies {
-    implementation("me.alex_s168:blitz:0.23")
+    implementation("me.alex_s168:blitz:0.24.1")
 }
 ```
 

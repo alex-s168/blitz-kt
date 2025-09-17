@@ -2,11 +2,10 @@ plugins {
     kotlin("jvm") version "1.9.21"
     application
     `maven-publish`
-    id("co.uzzu.dotenv.gradle") version "4.0.0"
 }
 
 group = "me.alex_s168"
-version = "0.23"
+version = "0.24.1"
 
 repositories {
     mavenCentral()
@@ -26,6 +25,11 @@ kotlin {
     jvmToolchain(11)
 }
 
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
 application {
     mainClass.set("blitz.FnpKt")
 }
@@ -33,11 +37,11 @@ application {
 publishing {
     repositories {
         maven {
-            url = uri("http://198.7.115.119:8080/libs")
-            isAllowInsecureProtocol = true
-            credentials {
-                username = env.USER.orNull()
-                password = env.PASS.orNull()
+            name = "vxccLibs"
+            url = uri("https://maven.vxcc.dev/libs")
+            credentials(PasswordCredentials::class)
+            authentication {
+                create<BasicAuthentication>("basic")
             }
         }
     }
@@ -49,6 +53,13 @@ publishing {
             version = version.toString()
 
             from(components["kotlin"])
+            artifact(tasks["sourcesJar"])
+            artifact(tasks["javadocJar"])
+
+            pom {
+                name.set("blitz")
+                url.set("https://github.com/alex_s168/blitz")
+            }
         }
     }
 }

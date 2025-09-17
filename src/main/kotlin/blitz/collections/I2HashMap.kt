@@ -23,6 +23,6 @@ fun <V> I2HashMap(
 ): BlitzHashMap<I2HashMapKey, V> =
     BlitzHashMap(
         bucketCount,
-        DynBuckets(SortedListBuckets(underlying)),
+        DynBucketsT<I2HashMapKey, V, _>(SortedListBuckets(underlying)),
         I2HashMapKey::cantorHash
     )
